@@ -31,4 +31,11 @@ router.delete('/values/:id', function(req, res) {
   res.send(JSON.stringify({status: "ok", value: uuid}));
 });
 
+// customer
+router.get("/api/customers/:id", (req, res) => {
+  let uuid = req.params.id;
+
+  mongodb.getCustomers(res);
+});
+
 module.exports = router;

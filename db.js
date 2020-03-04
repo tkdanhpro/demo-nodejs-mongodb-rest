@@ -4,6 +4,27 @@ var statsd = require('./statsd');
 var schema = mongoose.Schema({value: String});
 var Values = mongoose.model('values', schema);
 
+var Customer = mongoose.Schema({
+    firstName: String,
+    lastName: String,
+    phoneNumber:String,
+    email: String,
+    password_hash: String,
+    gender: String,
+    platform: String,
+    provider: String,
+    avatarUrl: String,
+    status: String,
+    birthDay: String,
+    facebook_id: String,
+    facebook_link: String,
+    deleted: Boolean,
+    totalSpentAmount: Number,
+    totalLoanAmount: Number
+});
+
+var CustomerModel = mongoose.model("customers", Customer);
+
 const mongoUrl = "mongodb://127.0.0.1:27017/moneydb";
 
 module.exports = {
@@ -19,7 +40,32 @@ module.exports = {
                 statsd.gauge('values', result);
             }
         })
+    }, 
+
+    getCustomers : (res) => {
+        CustomerModel.find({_id: '5e5e24d167f974dc3a41d4e8'}, (err, data) => {
+            if (err || !data) {
+                console.log(err);
+                res.status(500).send("Database error!");
+                return
+            }
+            console.log("data response: ", JSON.stringify(data));
+            res.status(200).send(data);
+        });
     },
+
+    getCustomerById : (res) => {
+        CustomerModel.findOne({id: "1"},(err, data) => {
+            if (err || !data) {
+                console.log(err);
+                res.status(500).send("Database error!");
+                return
+            }
+            console.log("data response: ", JSON.stringify(data));
+            res.status(200).send(data);
+        });    
+    },
+
 
     getVal : function(res) {
         Values.find(function(err, result) {
