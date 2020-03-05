@@ -1,74 +1,89 @@
-var mongoose = require('mongoose');
-var statsd = require('./statsd');
+let mongoose = require('mongoose');
+let statsd = require('./statsd');
+let userModel = require('./app/user/user.model');
+let WalletHistoryModel = require('./models/walletHistory');
 
-var schema = mongoose.Schema({value: String});
-var Values = mongoose.model('values', schema);
-
-var Customer = mongoose.Schema({
-    firstName: String,
-    lastName: String,
-    phoneNumber:String,
-    email: String,
-    password_hash: String,
-    gender: String,
-    platform: String,
-    provider: String,
-    avatarUrl: String,
-    status: String,
-    birthDay: String,
-    facebook_id: String,
-    facebook_link: String,
-    deleted: Boolean,
-    totalSpentAmount: Number,
-    totalLoanAmount: Number
-});
-
-var CustomerModel = mongoose.model("customers", Customer);
+const Joi = require('joi');
 
 const mongoUrl = "mongodb://127.0.0.1:27017/moneydb";
 
 module.exports = {
-    connectDB : function() {
-        mongoose.connect(process.env.MONGODB_ADDON_URI || mongoUrl, { useNewUrlParser: true, useUnifiedTopology: true })
-        .then(() => console.log("DB connected!"))
-        .catch(err => console.log("DB connection Error: ${err.message}"));
+    connectDB: function () {
+        mongoose.connect(process.env.MONGODB_ADDON_URI || mongoUrl,
+            {
+                useNewUrlParser: true,
+                useUnifiedTopology: true,
+                useFindAndModify: false
+            })
+            .then(() => console.log("DB connected!"))
+            .catch(err => console.log("DB connection Error: ${err.message}"));
     },
 
-    updateGauge : function() {
-        Values.count(function(err, result) {
-            if(!err) {
+    updateGauge: function () {
+        Values.count(function (err, result) {
+            if (!err) {
                 statsd.gauge('values', result);
             }
         })
-    }, 
+    },
 
-    getCustomers : (res) => {
-        CustomerModel.find({_id: '5e5e24d167f974dc3a41d4e8'}, (err, data) => {
-            if (err || !data) {
+    // User start...
+    getUsers: (params, res) => {
+        userModel.find(params, (err, result) => {
+            if (err || !result) {
                 console.log(err);
                 res.status(500).send("Database error!");
                 return
             }
-            console.log("data response: ", JSON.stringify(data));
-            res.status(200).send(data);
+
+            res.status(201).send({ status: "ok", data: result });
         });
     },
 
-    getCustomerById : (res) => {
-        CustomerModel.findOne({id: "1"},(err, data) => {
-            if (err || !data) {
+    addUser: (user, res) => {
+        new userModel(user).save((err, result) => {
+            if (err) {
                 console.log(err);
-                res.status(500).send("Database error!");
+                res.send(JSON.stringify({ status: "error", value: "Error, db request failed" }));
                 return
             }
-            console.log("data response: ", JSON.stringify(data));
-            res.status(200).send(data);
-        });    
+
+            res.status(201).send({ status: "ok", data: result });
+        });
+
     },
 
+    updateUser: (id, data, res) => {
+        userModel.findByIdAndUpdate(id, data, { new: true }, (err, result) => {
+            if (err) {
+                console.log(err);
+                res.send(JSON.stringify({ status: "error", value: "Error, db request failed" }));
+                return
+            }
 
-    getVal : function(res) {
-        Values.find(function(err, result) {
+            res.status(201).send({ status: "ok", data: result });
+        });
+    },
+
+    // User end...
+
+    // Wallet history start...
+
+    getWalletHistories: async (req, res) => {
+        const options = {
+            sort: { _id: -1 },
+            limit: parseInt(req.query.limit || 20, 10),
+            page: parseInt(req.query.page || 1, 10)
+          }
+      
+          const histories = await WalletHistoryModel.paginate({}, options)
+          res.status(201).send({ status: "ok", data: histories });
+    },
+
+    // Wallet history end...
+
+    getVal: function (res) {
+        Values.find(function (err, result) {
             if (err) {
                 console.log(err);
                 res.send('database error');
@@ -80,26 +95,26 @@ module.exports = {
                 values[val["_id"]] = val["value"]
             }
             var title = process.env.TITLE || 'NodeJS MongoDB demo'
-            res.render('index', {title, values: values});
+            res.render('index', { title, values: values });
         });
     },
 
-    sendVal : function(val, res) {
-        var request = new Values({value: val});
+    sendVal: function (val, res) {
+        var request = new Values({ value: val });
         request.save((err, result) => {
             if (err) {
                 console.log(err);
-                res.send(JSON.stringify({status: "error", value: "Error, db request failed"}));
+                res.send(JSON.stringify({ status: "error", value: "Error, db request failed" }));
                 return
             }
             this.updateGauge();
             statsd.increment('creations');
-            res.status(201).send(JSON.stringify({status: "ok", value: result["value"], id: result["_id"]}));
+            res.status(201).send(JSON.stringify({ status: "ok", value: result["value"], id: result["_id"] }));
         });
     },
 
-    delVal : function(id) {
-        Values.remove({_id: id}, (err) => {
+    delVal: function (id) {
+        Values.remove({ _id: id }, (err) => {
             if (err) {
                 console.log(err);
             }
