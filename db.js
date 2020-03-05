@@ -1,7 +1,7 @@
 let mongoose = require('mongoose');
 let statsd = require('./statsd');
 let userModel = require('./app/user/user.model');
-let WalletHistoryModel = require('./models/walletHistory');
+let walletHistoryModel = require('./models/walletHistory');
 
 const Joi = require('joi');
 
@@ -76,7 +76,7 @@ module.exports = {
             page: parseInt(req.query.page || 1, 10)
           }
       
-          const histories = await WalletHistoryModel.paginate({}, options)
+          const histories = await walletHistoryModel.paginate({}, options)
           res.status(201).send({ status: "ok", data: histories });
     },
 

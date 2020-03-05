@@ -99,26 +99,33 @@ router.post('/fb/verify_token', (req, res) => {
   try {
     
     let accessToken = req.body.accessToken;
-    console.log("access token ", accessToken);
-    
+    console.log("accessToken ", accessToken);
     let result = request({
-      uri: 'https://graph.facebook.com/me?access_token=EAALyglEcVVcBABxqpPx4Clic70THv8xVpVOWQEnnfJ2CSsLk6NPgjXTNPEbcJG0U4KZCiRvVKUYC3zr54NCyLiZBrZClRmiGZCv0Wwm1y33icaaPjuZAVwuCVnIDxExSWOBKm5lrePWQMpbo2ftzxCypwKUUWDlZBpoHYlvbn8DOmXZBYFEIHv4AUPGv1yVt66lVNcznmgFmqqtEtvf4BjyXezXeOKNReJz4Bw15YO2pQZDZD',
+      uri: 'https://graph.facebook.com/me?fields=name,email&access_token=' + accessToken,
       method: 'GET',
-      timeout: 3000      
+      timeout: 3000
     },
-    (err, res, body) => {
-      if (err) { return console.log("error! ", err); }
-      
-    });
+    function (error, response, body) {
+      if (error) {
+          console.log('error:', error); // Print the error if one occurred
 
-    res.status(201).send({ status: "ok", data: result });
+      } else if(response && body) {
+          console.log('statusCode:', response && response.statusCode);
+          body = JSON.parse(body);
+          let name = body.name;
+          let facebookId = body.id;
+          let email = body.email;
+
+          res.json({'body': body}); // Print JSON response.
+      }
+  });
+
+    
 
   } catch (error) {
     return handlePageError(res, error);
   }
 });
-
-
 
 const handlePageError = (res, e) => res.status(500).send(e.message)
 
