@@ -19,15 +19,20 @@ module.exports = {
             .catch(err => console.log("DB connection Error: ${err.message}"));
     },
 
-    updateGauge: function () {
-        Values.count(function (err, result) {
-            if (!err) {
-                statsd.gauge('values', result);
+    // User start...
+
+    verifyUser: (facebookId) => {
+        return userModel.find({facebookId: facebookId}, (err, result) => {
+            if (err || !result) {
+                console.log(err);
+                
+                return err;
             }
-        })
+            return result;
+                       
+        });
     },
 
-    // User start...
     getUsers: (params, res) => {
         userModel.find(params, (err, result) => {
             if (err || !result) {
@@ -35,20 +40,24 @@ module.exports = {
                 res.status(500).send("Database error!");
                 return
             }
-
             res.status(201).send({ status: "ok", data: result });
+            
         });
     },
 
-    addUser: (user, res) => {
-        new userModel(user).save((err, result) => {
+    addUser: (user, data) => {
+        return new userModel(user).save((err, result) => {
             if (err) {
                 console.log(err);
-                res.send(JSON.stringify({ status: "error", value: "Error, db request failed" }));
+                data.status = "error";
+                data.message = "Error, db request failed";                
                 return
             }
+            
+            data.status = "OK";
+            data.result = result;
 
-            res.status(201).send({ status: "ok", data: result });
+            return result;
         });
 
     },

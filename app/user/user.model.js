@@ -13,8 +13,9 @@ const users = mongoose.model('users', new mongoose.Schema({
     avatarUrl: String,
     status: String,
     birthDay: String,
-    facebook_id: String,
-    facebook_link: String,
+    facebookId: String,
+    facebookLink: String,
+    facebookLink: String,
     deleted: Boolean,
     totalSpentAmount: Number,
     totalLoanAmount: Number
