@@ -21,7 +21,7 @@ module.exports = {
 
     // User start...
 
-    verifyUser: (facebookId) => {
+    verifyFbAccount: (facebookId) => {
         return userModel.find({facebookId: facebookId}, (err, result) => {
             if (err || !result) {
                 console.log(err);
@@ -33,31 +33,42 @@ module.exports = {
         });
     },
 
-    getUsers: (params, res) => {
-        userModel.find(params, (err, result) => {
+    verifyGgAccount: (googleId) => {
+        return userModel.find({googleId: googleId}, (err, result) => {
+            if (err || !result) {
+                console.log(err);
+                
+                return err;
+            }
+            return result;
+                       
+        });
+    },
+
+    getUsers: async (params, res) => {
+        return await userModel.find(params, (err, result) => {
             if (err || !result) {
                 console.log(err);
                 res.status(500).send("Database error!");
                 return
             }
-            res.status(201).send({ status: "ok", data: result });
-            
+        
+           res.status(201).send({ status: "ok", data: result });
+   
+           
         });
     },
 
-    addUser: (user, data) => {
-        return new userModel(user).save((err, result) => {
+    addUser: async (user, res) => {        
+ 
+        await new userModel(user).save((err, result) => {
             if (err) {
                 console.log(err);
-                data.status = "error";
-                data.message = "Error, db request failed";                
+                res.send(JSON.stringify({ status: "error", value: "Error, db request failed" }));        
                 return
             }
-            
-            data.status = "OK";
-            data.result = result;
 
-            return result;
+            res.status(201).send({ status: "ok", data: result });
         });
 
     },

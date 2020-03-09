@@ -1,11 +1,70 @@
-var express = require("express");
-var request = require('request');
-var mongodb = require('../../db');
+const express = require("express");
+const request = require('request');
+const mongodb = require('../../db');
+const { OAthu2Client } = require('google-auth-library');
+
+
 const userRoute = express.Router();
+
+userRoute.post('/gg/verify_token', (req, res) => {
+  try {
+    let accessToken = req.body.accessToken;
+    console.log("google token ", accessToken);
+
+    request({
+      uri: 'https://oauth2.googleapis.com/tokeninfo?id_token=' + accessToken,
+      method: 'GET',
+      timeout: 3000
+    },
+      function (error, response, body) {
+        if (error) {
+          console.log('error:', error);
+
+        } else if (response && body) {
+          body = JSON.parse(body);
+          let given_name = body.given_name;
+          let family_name = body.family_name;
+          let googleId = body.sub;
+          let email = body.email || '';          
+          let avatarUrl = body.picture;
+
+          let userData = {
+            "firstName": given_name,
+            "lastName": family_name,
+            "email": email,
+            "googleId": googleId,            
+            "avatarUrl": avatarUrl,
+            "totalSpentAmount": 0,
+            "totalLoanAmount": 0
+          }          
+          console.log("gg userData ", userData);
+
+          mongodb.verifyGgAccount(googleId).then((result) => {
+
+            if (result !== null && result != '') {
+              console.log("user found! " + result);
+              res.status(201).send({ status: "ok", data: result });
+            }
+            else {
+              console.log("user not found! => create new user");
+              mongodb.addUser(userData, res);
+
+            }
+          },
+            () => {
+              console.log("user not found!");
+            });
+        }
+
+      });    
+
+  } catch (error) {
+    return (res, error) => res.status(500).send(error.message)
+  }
+});
 
 userRoute.post('/fb/verify_token', (req, res) => {
   try {
-
     let accessToken = req.body.accessToken;
     console.log("accessToken ", accessToken);
     request({
@@ -22,24 +81,24 @@ userRoute.post('/fb/verify_token', (req, res) => {
           body = JSON.parse(body);
           let name = body.name;
           let facebookId = body.id;
-          let email = body.email;
-          let facebookLink = body.link;
+          let email = body.email || '';
+          let facebookLink = body.link || '';
 
           let userData = {
-            "data": {
-              "firstName": name,
-              "lastName": name,
-              "email": email,
-              "totalSpentAmount": 0,
-              "facebookId": facebookId,
-              "facebookLink": facebookLink
-            }
+            "firstName": name,
+            "lastName": name,
+            "email": email,
+            "facebookId": facebookId,
+            "facebookLink": facebookLink,
+            "totalSpentAmount": 0,
+            "totalLoanAmount": 0
           }
 
-          verifyUser(facebookId).then((result) => {
+          mongodb.verifyFbAccount(facebookId).then((result) => {
 
             if (result !== null && result != '') {
               console.log("user found! " + result);
+              res.status(201).send({ status: "ok", data: result });
             }
             else {
               console.log("user not found! => create new user");
@@ -48,10 +107,9 @@ userRoute.post('/fb/verify_token', (req, res) => {
             }
           },
             () => {
-              console.log("user not found! ");
+              console.log("user not found!");
             });
 
-          return res.json({ 'body': body }); // Print JSON response.
         }
       });
 
@@ -60,15 +118,9 @@ userRoute.post('/fb/verify_token', (req, res) => {
   }
 });
 
-function verifyUser(facebookId) {
-  return mongodb.verifyUser(facebookId);
-}
-
-userRoute.get("/all", (req, res) => {
+userRoute.get("/all", async (req, res) => {
+  // var data = {};
   mongodb.getUsers({}, res);
-
-  // res.send({ status: result, data: result });
-
 });
 
 userRoute.get("/:id", (req, res) => {
@@ -91,24 +143,13 @@ userRoute.post('/add', async (req, res) => {
       res.send(JSON.stringify({ status: "error", value: "user undefined" }));
       return
     }
-    var data = {};
-    
-    addNew(user, data).then((data) => {
-      res.status(201).send(data);
-    });    
-    
+
+    mongodb.addUser(user, res)
 
   } catch (error) {
     return handlePageError(res, error)
   }
 });
-
-function addNew(user, data) {
-
-  let usermodel =  mongodb.addUser(user, data);
-  console.log("usermodel " +usermodel);
-  return usermodel;
-}
 
 userRoute.put('/:id', async (req, res) => {
   try {
