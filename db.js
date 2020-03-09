@@ -5,18 +5,21 @@ let walletHistoryModel = require('./models/walletHistory');
 
 const Joi = require('joi');
 
-const mongoUrl = "mongodb://127.0.0.1:27017/moneydb";
+//const mongoUrl = "mongodb://127.0.0.1:27017/moneydb";
+
+const mongoUrl = "mongodb://tkdanh1:%40Tranvan2@money1-shard-00-00-j1fvj.mongodb.net:27017,money1-shard-00-01-j1fvj.mongodb.net:27017,money1-shard-00-02-j1fvj.mongodb.net:27017/moneydb?ssl=true&replicaSet=Money1-shard-0&authSource=admin&retryWrites=true&w=majority";
+
 
 module.exports = {
     connectDB: function () {
-        mongoose.connect(process.env.MONGODB_ADDON_URI || mongoUrl,
+        mongoose.connect(mongoUrl,
             {
                 useNewUrlParser: true,
                 useUnifiedTopology: true,
                 useFindAndModify: false
             })
             .then(() => console.log("DB connected!"))
-            .catch(err => console.log("DB connection Error: ${err.message}"));
+            .catch(err => console.log("DB connection Error:", err));
     },
 
     // User start...
