@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 
-
 const users = mongoose.model('users', new mongoose.Schema({
     firstName: String,
     lastName: String,
@@ -18,7 +17,13 @@ const users = mongoose.model('users', new mongoose.Schema({
     facebookLink: String,
     deleted: Boolean,
     totalSpentAmount: Number,
-    totalLoanAmount: Number
+    totalLoanAmount: Number,
+        
+    settings: {
+        notification: Boolean,
+        language: String,
+        version: String
+    }
 }, {
     timestamps: {
         createdAt: 'created_at',

@@ -3,11 +3,9 @@ let statsd = require('./statsd');
 let userModel = require('./app/user/user.model');
 let walletHistoryModel = require('./models/walletHistory');
 
-const Joi = require('joi');
+const mongoUrl = "mongodb://127.0.0.1:27017/moneydb";
 
-//const mongoUrl = "mongodb://127.0.0.1:27017/moneydb";
-
-const mongoUrl = "mongodb://tkdanh1:tranvan2@money1-shard-00-00-j1fvj.mongodb.net:27017,money1-shard-00-01-j1fvj.mongodb.net:27017,money1-shard-00-02-j1fvj.mongodb.net:27017/moneydb?ssl=true&replicaSet=Money1-shard-0&authSource=admin&retryWrites=true&w=majority";
+// const mongoUrl = "mongodb://tkdanh1:tranvan2@money1-shard-00-00-j1fvj.mongodb.net:27017,money1-shard-00-01-j1fvj.mongodb.net:27017,money1-shard-00-02-j1fvj.mongodb.net:27017/moneydb?ssl=true&replicaSet=Money1-shard-0&authSource=admin&retryWrites=true&w=majority";
 
 
 module.exports = {
@@ -21,6 +19,13 @@ module.exports = {
             .then(() => console.log("DB connected!"))
             .catch(err => console.log("DB connection Error:", err));
     },
+
+    // Common start...
+
+    deleteOne: (id) => {
+        
+    },
+    // Common end...
 
     // User start...
 

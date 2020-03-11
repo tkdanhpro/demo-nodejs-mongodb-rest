@@ -6,6 +6,14 @@ const { OAthu2Client } = require('google-auth-library');
 
 const userRoute = express.Router();
 
+userRoute.post('/appInfo', (req, res) => {
+  try {
+    
+  } catch (error) {
+    return (res, error) => res.status(500).send(error.message)
+  }
+});
+
 userRoute.post('/gg/verify_token', (req, res) => {
   try {
     let accessToken = req.body.accessToken;
@@ -25,18 +33,18 @@ userRoute.post('/gg/verify_token', (req, res) => {
           let given_name = body.given_name;
           let family_name = body.family_name;
           let googleId = body.sub;
-          let email = body.email || '';          
+          let email = body.email || '';
           let avatarUrl = body.picture;
 
           let userData = {
             "firstName": given_name,
             "lastName": family_name,
             "email": email,
-            "googleId": googleId,            
+            "googleId": googleId,
             "avatarUrl": avatarUrl,
             "totalSpentAmount": 0,
             "totalLoanAmount": 0
-          }          
+          }
           console.log("gg userData ", userData);
 
           mongodb.verifyGgAccount(googleId).then((result) => {
@@ -56,7 +64,7 @@ userRoute.post('/gg/verify_token', (req, res) => {
             });
         }
 
-      });    
+      });
 
   } catch (error) {
     return (res, error) => res.status(500).send(error.message)
