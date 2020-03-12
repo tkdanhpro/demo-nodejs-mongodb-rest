@@ -6,7 +6,15 @@ const validator = require('validator');
 const JWT_KEY = '@Money!Xi@oLin$@Tranvan2@@';
 
 async function generateAuthToken(user) {
-    const jwtToken = jwt.sign({ _id: user.id }, JWT_KEY);
+    const payload = {
+        id: user.id,
+        userName: user.userName,
+        passwordHash: user.passwordHash
+    };
+    const signOptions = {
+
+    };
+    const jwtToken = jwt.sign(payload, JWT_KEY, signOptions);
     user.jwtToken = jwtToken;
     await user.save()
     return jwtToken;
@@ -88,34 +96,52 @@ module.exports = {
 
     },
 
-    signUpWithPassword: async (params, res) => {
+    signUpWithPassword: async (data, res) => {
         try {
-            const emailInput = params.email;
-            if (emailInput == undefined || emailInput == '') {
-                res.send(JSON.stringify({ status: "error", value: "Email cannot be empty!" }));
+            
+            // If sign up with email
+            // console.log("data ", data.email);
+            // const emailInput = data.email;
+            // if (emailInput == undefined || emailInput == '') {
+            //     res.send(JSON.stringify({ status: "error", value: "Email cannot be empty!" }));
+            //     return
+            // }
+            // if (!validator.isEmail(emailInput)) {
+            //     res.send(JSON.stringify({ status: "error", value: "Wrong email format!" }));
+            //     return
+            // }
+            // const existUser = await UserModel.find({ email: emailInput });
+            // console.log("existUser ", existUser);
+
+            // If sign up by user name
+            const userName = data.userName;
+            if (userName == undefined || userName == '') {
+                res.send(JSON.stringify({ status: "error", value: "Username cannot be empty!" }));
                 return
             }
-            if (!validator.isEmail(emailInput)) {
-                res.send(JSON.stringify({ status: "error", value: "Wrong email format!" }));
+            if (userName.length < 6) {
+                res.send(JSON.stringify({ status: "error", value: "Username must be greater than 6 character!" }));
                 return
             }
 
-            const existUser = await UserModel.find({ email: emailInput });
+            const existUser = await UserModel.find({ userName: userName });
             console.log("existUser ", existUser);
 
-            if (existUser != undefined) {
+            if (existUser != undefined && existUser.length) {
                 //throw new Error("Email already exists!");
-                res.send(JSON.stringify({ status: "error", value: "Email already exists!" }));
+                res.send(JSON.stringify({ status: "error", value: "Username already exists!" }));
                 return
             }
-            if (params.password.length < 8) {
+            if (data.passwordHash.length < 8) {
                 //throw new Error("Password length must be greater than 8 characters!")
                 res.send(JSON.stringify({ status: "error", value: "Password length must be greater than 8 characters!" }));
                 return
             }
             // register new user
-            const user = new UserModel(params);
-            await addUser(user, res);
+            const newUser = new UserModel(data);
+            await addUser(newUser);
+
+            res.status(201).send({ status: "ok", data: newUser });
         } catch (err) {
             res.send(JSON.stringify({ status: "error", value: err }));
         }

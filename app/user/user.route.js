@@ -14,12 +14,14 @@ userRoute.post('/appInfo', (req, res) => {
   }
 });
 
-userRoute.post('/signUp', (req, res) => {
+userRoute.post('/signUp', async (req, res) => {
   try {
+    
     let data = req.body.data;
-    userDb.signUpWithPassword(data, res);
+    
+    await userDb.signUpWithPassword(data, res);
   } catch (error) {
-    return (res, error) => res.status(500).send(error.message)
+    res.status(500).send(error.message)
   }
 });
 

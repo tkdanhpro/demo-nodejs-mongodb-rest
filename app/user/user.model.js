@@ -2,6 +2,12 @@ const mongoose = require('mongoose');
 
 
 const users = mongoose.model('users', new mongoose.Schema({
+    userName: {
+        type: String,
+        trim: true,
+        unique: true,
+        sparse: true
+    },
     firstName: {
         type: String,
         required: true,
@@ -26,7 +32,7 @@ const users = mongoose.model('users', new mongoose.Schema({
         //     }
         // }
     },
-    password: String,
+ 
     passwordHash: String,
     jwtToken: {
         type: String
