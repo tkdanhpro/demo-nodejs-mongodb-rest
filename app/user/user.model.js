@@ -1,28 +1,65 @@
 const mongoose = require('mongoose');
 
+
 const users = mongoose.model('users', new mongoose.Schema({
-    firstName: String,
-    lastName: String,
+    firstName: {
+        type: String,
+        required: true,
+        trim: true
+    },
+    lastName: {
+        type: String,
+        required: true,
+        trim: true
+    },
+    birthDay: Date,
+    gender: String,
     phoneNumber: String,
-    email: String,
-    password_hash: String,
+    email: {
+        type: String,
+        // unique: true,
+        lowercase: true,
+        trim: true
+        // validate: value => {
+        //     if (!validator.isEmail(value)) {
+        //         throw new Error({error: 'Invalid Email address!'})
+        //     }
+        // }
+    },
+    password: String,
+    passwordHash: String,
+    jwtToken: {
+        type: String
+    },
     gender: String,
     platform: String,
     provider: String,
     avatarUrl: String,
     status: String,
     birthDay: String,
-    facebookId: String,
-    googleId: String,
+    facebookId: {
+        type: String,
+        trim: true,
+        unique: true,
+        sparse: true
+    },
+    googleId: {
+        type: String,
+        trim: true,
+        unique: true,
+        sparse: true
+    },
     facebookLink: String,
     deleted: Boolean,
     totalSpentAmount: Number,
     totalLoanAmount: Number,
-        
+
     settings: {
         notification: Boolean,
         language: String,
-        version: String
+        version: String,
+        appId: String
+
     }
 }, {
     timestamps: {

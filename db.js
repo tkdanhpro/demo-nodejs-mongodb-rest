@@ -1,9 +1,11 @@
 let mongoose = require('mongoose');
 let statsd = require('./statsd');
-let userModel = require('./app/user/user.model');
+
 let walletHistoryModel = require('./models/walletHistory');
 
 const mongoUrl = "mongodb://127.0.0.1:27017/moneydb";
+
+// const mongoUrl = process.env.MONGODB_URL
 
 // const mongoUrl = "mongodb://tkdanh1:tranvan2@money1-shard-00-00-j1fvj.mongodb.net:27017,money1-shard-00-01-j1fvj.mongodb.net:27017,money1-shard-00-02-j1fvj.mongodb.net:27017/moneydb?ssl=true&replicaSet=Money1-shard-0&authSource=admin&retryWrites=true&w=majority";
 
@@ -12,6 +14,7 @@ module.exports = {
     connectDB: function () {
         mongoose.connect(mongoUrl,
             {
+                useCreateIndex: true,
                 useNewUrlParser: true,
                 useUnifiedTopology: true,
                 useFindAndModify: false
@@ -23,77 +26,11 @@ module.exports = {
     // Common start...
 
     deleteOne: (id) => {
-        
+
     },
     // Common end...
 
-    // User start...
-
-    verifyFbAccount: (facebookId) => {
-        return userModel.find({facebookId: facebookId}, (err, result) => {
-            if (err || !result) {
-                console.log(err);
-                
-                return err;
-            }
-            return result;
-                       
-        });
-    },
-
-    verifyGgAccount: (googleId) => {
-        return userModel.find({googleId: googleId}, (err, result) => {
-            if (err || !result) {
-                console.log(err);
-                
-                return err;
-            }
-            return result;
-                       
-        });
-    },
-
-    getUsers: async (params, res) => {
-        return await userModel.find(params, (err, result) => {
-            if (err || !result) {
-                console.log(err);
-                res.status(500).send("Database error!");
-                return
-            }
-        
-           res.status(201).send({ status: "ok", data: result });
-   
-           
-        });
-    },
-
-    addUser: async (user, res) => {        
- 
-        await new userModel(user).save((err, result) => {
-            if (err) {
-                console.log(err);
-                res.send(JSON.stringify({ status: "error", value: "Error, db request failed" }));        
-                return
-            }
-
-            res.status(201).send({ status: "ok", data: result });
-        });
-
-    },
-
-    updateUser: (id, data, res) => {
-        userModel.findByIdAndUpdate(id, data, { new: true }, (err, result) => {
-            if (err) {
-                console.log(err);
-                res.send(JSON.stringify({ status: "error", value: "Error, db request failed" }));
-                return
-            }
-
-            res.status(201).send({ status: "ok", data: result });
-        });
-    },
-
-    // User end...
+    
 
     // Wallet history start...
 

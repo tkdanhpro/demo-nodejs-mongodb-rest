@@ -1,6 +1,6 @@
 const express = require("express");
 const request = require('request');
-const mongodb = require('../../db');
+const userDb = require('./user.db');
 const { OAthu2Client } = require('google-auth-library');
 
 
@@ -8,7 +8,16 @@ const userRoute = express.Router();
 
 userRoute.post('/appInfo', (req, res) => {
   try {
-    
+
+  } catch (error) {
+    return (res, error) => res.status(500).send(error.message)
+  }
+});
+
+userRoute.post('/signUp', (req, res) => {
+  try {
+    let data = req.body.data;
+    userDb.signUpWithPassword(data, res);
   } catch (error) {
     return (res, error) => res.status(500).send(error.message)
   }
@@ -25,9 +34,12 @@ userRoute.post('/gg/verify_token', (req, res) => {
       timeout: 3000
     },
       function (error, response, body) {
-        if (error) {
-          console.log('error:', error);
-
+        
+        const jsonBody = JSON.parse(body);
+        console.log(" gg body ", body);
+        
+        if (jsonBody.error) {
+          res.status(500).send({status: 500, error: jsonBody.error})
         } else if (response && body) {
           body = JSON.parse(body);
           let given_name = body.given_name;
@@ -47,21 +59,7 @@ userRoute.post('/gg/verify_token', (req, res) => {
           }
           console.log("gg userData ", userData);
 
-          mongodb.verifyGgAccount(googleId).then((result) => {
-
-            if (result !== null && result != '') {
-              console.log("user found! " + result);
-              res.status(201).send({ status: "ok", data: result });
-            }
-            else {
-              console.log("user not found! => create new user");
-              mongodb.addUser(userData, res);
-
-            }
-          },
-            () => {
-              console.log("user not found!");
-            });
+          userDb.verifyGgAccount(userData, res);
         }
 
       });
@@ -81,9 +79,10 @@ userRoute.post('/fb/verify_token', (req, res) => {
       timeout: 3000
     },
       function (error, response, body) {
-        if (error) {
-          console.log('error:', error); // Print the error if one occurred
-
+        const jsonBody = JSON.parse(body);
+        // console.log('FB body:', jsonBody.error);
+        if (jsonBody.error) {
+          res.status(500).send({status: 500, error: jsonBody.error})
         } else if (response && body) {
           console.log('statusCode:', response && response.statusCode);
           body = JSON.parse(body);
@@ -102,22 +101,7 @@ userRoute.post('/fb/verify_token', (req, res) => {
             "totalLoanAmount": 0
           }
 
-          mongodb.verifyFbAccount(facebookId).then((result) => {
-
-            if (result !== null && result != '') {
-              console.log("user found! " + result);
-              res.status(201).send({ status: "ok", data: result });
-            }
-            else {
-              console.log("user not found! => create new user");
-              mongodb.addUser(userData, res);
-
-            }
-          },
-            () => {
-              console.log("user not found!");
-            });
-
+          userDb.verifyFbAccount(userData, res);
         }
       });
 
@@ -128,7 +112,7 @@ userRoute.post('/fb/verify_token', (req, res) => {
 
 userRoute.get("/all", async (req, res) => {
   // var data = {};
-  mongodb.getUsers({}, res);
+  userDb.getUsers({}, res);
 });
 
 userRoute.get("/:id", (req, res) => {
@@ -137,7 +121,7 @@ userRoute.get("/:id", (req, res) => {
   if (uuid !== undefined && uuid !== "") {
     params = { _id: uuid };
   }
-  mongodb.getUsers(params, res);
+  userDb.getUsers(params, res);
 
 });
 
@@ -152,7 +136,7 @@ userRoute.post('/add', async (req, res) => {
       return
     }
 
-    mongodb.addUser(user, res)
+    userDb.addUser(user, res)
 
   } catch (error) {
     return handlePageError(res, error)
@@ -162,7 +146,7 @@ userRoute.post('/add', async (req, res) => {
 userRoute.put('/:id', async (req, res) => {
   try {
 
-    await mongodb.updateUser(req.params.id, req.body, res);
+    await userDb.updateUser(req.params.id, req.body, res);
 
   } catch (error) {
     return handlePageError(res, error);
