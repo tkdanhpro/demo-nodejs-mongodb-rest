@@ -29,9 +29,14 @@ const users = mongoose.model('users', new mongoose.Schema({
     },
  
     passwordHash: String,
-    accessToken: {
-        type: String
-    },
+    tokens: [
+        {
+            token: {
+                type: String,
+                required: true
+            }
+        }
+    ],
     type: String,
     gender: String,
     platform: String,

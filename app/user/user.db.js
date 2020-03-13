@@ -12,10 +12,10 @@ async function generateAuthToken(user) {
         passwordHash: user.passwordHash
     };
 
-    const accessToken = jwt.sign(payload, JWT_KEY);
-    user.accessToken = accessToken;
+    const token = jwt.sign(payload, JWT_KEY);
+    user.tokens = user.tokens.concat({token});
     await user.save()
-    return accessToken;
+    return token;
 }
 
 async function generateFacebookAuthToken(user) {
@@ -24,10 +24,10 @@ async function generateFacebookAuthToken(user) {
         facebookId: user.facebookId
     };
 
-    const accessToken = jwt.sign(payload, JWT_KEY);
-    user.accessToken = accessToken;
+    const token = jwt.sign(payload, JWT_KEY);
+    user.tokens = user.tokens.concat({token});
     await user.save()
-    return accessToken;
+    return token;
 }
 
 async function generateGoogleAuthToken(user) {
@@ -36,10 +36,10 @@ async function generateGoogleAuthToken(user) {
         googleId: user.googleId
     };
 
-    const accessToken = jwt.sign(payload, JWT_KEY);
-    user.accessToken = accessToken;
+    const token = jwt.sign(payload, JWT_KEY);
+    user.tokens = user.tokens.concat({token});
     await user.save()
-    return accessToken;
+    return token;
 }
 
 async function addUser(user) {
@@ -65,7 +65,7 @@ async function addUser(user) {
 }
 
 const findByCredentials = async (username, passwordHash) => {
-    const user = await UserModel.findOne({username});
+    const user = await UserModel.findOne({ username });
     console.log("find user ", user);
     if (!user) {
         throw new Error('Invalid login credentials');
@@ -89,15 +89,15 @@ module.exports = {
 
         });
 
-        if (user !== null && user !== undefined && user.length) {
-            console.log("user found! " + user);
-            res.status(201).send({ status: "ok", data: user });
+        if (user !== null && Object.keys(user)) {
+            const token = await generateAuthToken(user)
+            res.send({ user, token })
         }
         else {
             console.log("user not found! => create new user");
             let newUser = new UserModel(userData);
             await addUser(newUser);
-            res.status(201).send({ status: "ok", data: newUser });
+            res.send({ newUser, 'token': newUser.tokens[0].token }) 
 
         }
     },
@@ -111,16 +111,16 @@ module.exports = {
             return result;
 
         });
-        console.log("user data! " + user);
-        if (user !== null && user !== undefined && user.length) {
+        
+        if (user !== null && Object.keys(user)) {
             console.log("user found! " + user);
-            res.status(201).send({ status: "ok", data: user });
+            const token = await generateAuthToken(user)
+            res.send({ user, token })
         }
         else {
             let newUser = new UserModel(userData);
             await addUser(newUser);
-            res.status(201).send({ status: "ok", data: newUser });
-
+            res.send({ newUser, 'token': newUser.tokens[0].token })
         }
     },
 
@@ -137,17 +137,29 @@ module.exports = {
         });
     },
 
+    signOut: async (req, res) => {
+        try {
+            req.user.tokens = req.user.tokens.filter((token) => {
+                return token.token != req.token
+            })
+            await req.user.save()
+            res.send()
+        } catch (err) {
+            res.status(400).send(JSON.stringify({ status: "error", value: err.toString() }));
+        }
+    },
+
     signInWithPassword: async (data, res) => {
         try {
             const userInfo = Object.assign(data);
             console.log("userInfo ", userInfo);
             const user = await findByCredentials(data.username, data.passwordHash);
             if (!user) {
-                return res.status(401).send({status: "error", value: 'Login failed! Check authentication credentials'})
+                return res.status(401).send({ status: "error", value: 'Login failed! Check authentication credentials' })
             }
             const token = await generateAuthToken(user)
             res.send({ user, token })
-        } catch (err) {        
+        } catch (err) {
             res.status(400).send(JSON.stringify({ status: "error", value: err.toString() }));
         }
     },
@@ -176,7 +188,7 @@ module.exports = {
                 return
             }
             if (username.length < 6) {
-                res.send(JSON.stringify({ status: "error", value: "Username must be greater than 6 character!" }));
+                res.send(JSON.stringify({ status: "error", value: "Username must be greater than 6 characters!" }));
                 return
             }
 

@@ -22,6 +22,15 @@ userRoute.post('/appInfo', (req, res) => {
   }
 });
 
+userRoute.post('/signOut', auth, async (req, res, next) => {
+  try {
+    await userDb.signOut(req, res);
+  } catch (err) {
+    next();
+    res.status(500).send(err.message)
+  }
+});
+
 userRoute.post('/signIn', async (req, res) => {
   try {
     

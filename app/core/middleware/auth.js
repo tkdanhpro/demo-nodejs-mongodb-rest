@@ -8,7 +8,7 @@ const auth = async (req, res, next) => {
         const token = req.header('Money-Xiaolin-Auth');
 
         const data = jwt.verify(token, JWT_KEY);
-        const user = await UserModel.findOne({ _id: data.id, accessToken: token });
+        const user = await UserModel.findOne({ _id: data.id, 'tokens.token': token });
         if (!user) {
             throw new Error();
         }
