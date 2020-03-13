@@ -2,22 +2,17 @@ const mongoose = require('mongoose');
 
 
 const users = mongoose.model('users', new mongoose.Schema({
-    userName: {
+    username: {
         type: String,
         trim: true,
         unique: true,
         sparse: true
     },
-    firstName: {
+    fullName: {
         type: String,
         required: true,
         trim: true
-    },
-    lastName: {
-        type: String,
-        required: true,
-        trim: true
-    },
+    },   
     birthDay: Date,
     gender: String,
     phoneNumber: String,
@@ -34,13 +29,14 @@ const users = mongoose.model('users', new mongoose.Schema({
     },
  
     passwordHash: String,
-    jwtToken: {
+    accessToken: {
         type: String
     },
+    type: String,
     gender: String,
     platform: String,
     provider: String,
-    avatarUrl: String,
+    picture: String,
     status: String,
     birthDay: String,
     facebookId: {
