@@ -212,10 +212,10 @@ userRoute.post('/add', async (req, res) => {
   }
 });
 
-userRoute.put('/:id', async (req, res) => {
+userRoute.put('/update', auth, async (req, res) => {
   try {
 
-    await userDb.updateUser(req.params.id, req.body, res);
+    await userDb.updateUser(req.user.id ,req.body.data, res);
 
   } catch (error) {
     return handlePageError(res, error);
