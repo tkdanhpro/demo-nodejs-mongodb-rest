@@ -97,7 +97,7 @@ module.exports = {
             console.log("user not found! => create new user");
             let newUser = new UserModel(userData);
             await addUser(newUser);
-            res.send({ user, 'token': newUser.tokens[0].token }) 
+            res.send({ "user" : newUser, 'token': newUser.tokens[0].token }) 
 
         }
     },
