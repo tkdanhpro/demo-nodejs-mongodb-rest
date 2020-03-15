@@ -6,7 +6,8 @@ const users = mongoose.model('users', new mongoose.Schema({
         type: String,
         trim: true,
         unique: true,
-        sparse: true
+        sparse: true,
+        immutable: true
     },
     fullName: {
         type: String,

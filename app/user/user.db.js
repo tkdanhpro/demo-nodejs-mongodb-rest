@@ -219,7 +219,7 @@ module.exports = {
             const newUser = new UserModel(data);
             await addUser(newUser);
 
-            res.status(201).send({ status: "ok", data: newUser });
+            res.status(201).send({ status: "ok", "newUser": newUser, 'token': newUser.tokens[0].token });
         } catch (err) {
             res.send(JSON.stringify({ status: "Error! Something went wrong!", value: err }));
         }
