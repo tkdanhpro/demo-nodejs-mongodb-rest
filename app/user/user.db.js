@@ -97,7 +97,7 @@ module.exports = {
             console.log("user not found! => create new user");
             let newUser = new UserModel(userData);
             await addUser(newUser);
-            res.send({ newUser, 'token': newUser.tokens[0].token }) 
+            res.send({ user, 'token': newUser.tokens[0].token }) 
 
         }
     },
@@ -120,7 +120,7 @@ module.exports = {
         else {
             let newUser = new UserModel(userData);
             await addUser(newUser);
-            res.send({ newUser, 'token': newUser.tokens[0].token })
+            res.send({ user, 'token': newUser.tokens[0].token })
         }
     },
 
@@ -167,19 +167,27 @@ module.exports = {
     signUpWithPassword: async (data, res) => {
         try {
 
+            // Validate full name
+
+            if (data.fullName.length < 6) {
+                res.send(JSON.stringify({ status: "error", value: "Full name must be greater than 6 characters!" }));
+                return
+            }
+
             // If sign up with email
-            // console.log("data ", data.email);
-            // const emailInput = data.email;
-            // if (emailInput == undefined || emailInput == '') {
-            //     res.send(JSON.stringify({ status: "error", value: "Email cannot be empty!" }));
-            //     return
-            // }
-            // if (!validator.isEmail(emailInput)) {
-            //     res.send(JSON.stringify({ status: "error", value: "Wrong email format!" }));
-            //     return
-            // }
-            // const existUser = await UserModel.find({ email: emailInput });
-            // console.log("existUser ", existUser);
+            console.log("data ", data.email);
+            const emailInput = data.email;
+            
+            if (emailInput.length && !validator.isEmail(emailInput)) {
+                res.send(JSON.stringify({ status: "error", value: "Wrong email format!" }));
+                return
+            }
+            const existEmail = await UserModel.find({ email: emailInput });
+           
+            if (existEmail != undefined && Object.keys(existEmail).length) {                
+                res.send(JSON.stringify({ status: "error", value: "Email already exists!" }));
+                return
+            }
 
             // If sign up by user name
             const username = data.username;
@@ -205,7 +213,7 @@ module.exports = {
             if (existUser != undefined && Object.keys(existUser).length) {
                 //throw new Error("Email already exists!");
                 console.log("user exists! ");
-                res.send(JSON.stringify({ status: "error", value: "Username or Email already exists!" }));
+                res.send(JSON.stringify({ status: "error", value: "Username already exists!" }));
                 return
             }
             if (data.passwordHash.length < 8) {
@@ -219,7 +227,7 @@ module.exports = {
             const newUser = new UserModel(data);
             await addUser(newUser);
 
-            res.status(201).send({ status: "ok", "newUser": newUser, 'token': newUser.tokens[0].token });
+            res.status(201).send({ status: "ok", "newUser": user, 'token': newUser.tokens[0].token });
         } catch (err) {
             res.send(JSON.stringify({ status: "Error! Something went wrong!", value: err }));
         }
