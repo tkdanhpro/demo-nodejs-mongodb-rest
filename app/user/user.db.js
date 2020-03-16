@@ -122,7 +122,7 @@ module.exports = {
         else {
             let newUser = new UserModel(userData);
             await addUser(newUser);
-            res.send({ user: newUser, 'token': newUser.tokens[0].token })
+            res.send({ 'user': newUser, 'token': newUser.tokens[0].token })
         }
     },
 
