@@ -3,9 +3,12 @@ const request = require('request');
 const userDb = require('./user.db');
 const auth = require('../core/middleware/auth');
 
+const GoogleVerifyFailedError = require('./../core/error/GoogleVerifyFailedError');
+const FacebookVerifyFailedError = require('./../core/error/FacebookVerifyFailedError');
+
 const userRoute = express.Router();
 
-userRoute.get('/me', auth, async(req, res, next) => {
+userRoute.get('/me', auth, async (req, res, next) => {
   try {
     res.send(req.user)
   } catch (err) {
@@ -33,10 +36,7 @@ userRoute.post('/signOut', auth, async (req, res, next) => {
 
 userRoute.post('/signIn', async (req, res) => {
   try {
-    
-    let data = req.body.data;
-    console.log("data ",data);
-    await userDb.signInWithPassword(data, res);
+    await userDb.signInWithPassword(req, res);
   } catch (error) {
     res.status(500).send(error.message)
   }
@@ -44,10 +44,7 @@ userRoute.post('/signIn', async (req, res) => {
 
 userRoute.post('/signUp', async (req, res) => {
   try {
-    
-    let data = req.body.data;
-    console.log("data ",data);
-    await userDb.signUpWithPassword(data, res);
+    await userDb.signUpWithPassword(req, res);
   } catch (error) {
     res.status(500).send(error.message)
   }
@@ -78,7 +75,6 @@ userRoute.post('/signUp', async (req, res) => {
 userRoute.post('/gg/verify_token', (req, res) => {
   try {
     let accessToken = req.body.accessToken;
-    console.log("google token ", accessToken);
 
     request({
       uri: 'https://oauth2.googleapis.com/tokeninfo?id_token=' + accessToken,
@@ -86,15 +82,15 @@ userRoute.post('/gg/verify_token', (req, res) => {
       timeout: 3000
     },
       function (error, response, body) {
-        
         const jsonBody = JSON.parse(body);
-        console.log(" gg body ", body);
-        
+
         if (jsonBody.error) {
-          res.status(500).send({status: 500, error: jsonBody.error})
+          console.log("jsonBody.error ", jsonBody.error);
+          // throw new GoogleVerifyFailedError("jsonBody.error");
+          res.status(500).send({ name: 'GoogleVerifyFailed', status: 500, message: jsonBody.error })
         } else if (response && body) {
           body = JSON.parse(body);
-          let fullName = body.name;          
+          let fullName = body.name;
           let googleId = body.sub;
           let email = body.email || '';
           let picture = body.picture;
@@ -108,7 +104,6 @@ userRoute.post('/gg/verify_token', (req, res) => {
             "totalSpentAmount": 0,
             "totalLoanAmount": 0
           }
-          console.log("gg userData ", userData);
 
           userDb.verifyGgAccount(userData, res);
         }
@@ -116,7 +111,7 @@ userRoute.post('/gg/verify_token', (req, res) => {
       });
 
   } catch (error) {
-    return (res, error) => res.status(500).send(error.message)
+    res.send(error)
   }
 });
 
@@ -138,7 +133,7 @@ userRoute.post('/gg/verify_token', (req, res) => {
 userRoute.post('/fb/verify_token', (req, res) => {
   try {
     let accessToken = req.body.accessToken;
-    console.log("accessToken ", accessToken);
+
     request({
       uri: 'https://graph.facebook.com/me?fields=name,email,link,picture&access_token=' + accessToken,
       method: 'GET',
@@ -146,11 +141,10 @@ userRoute.post('/fb/verify_token', (req, res) => {
     },
       function (error, response, body) {
         const jsonBody = JSON.parse(body);
-        // console.log('FB body:', jsonBody.picture.data);
         if (jsonBody.error) {
-          res.status(500).send({status: 500, error: jsonBody.error})
+          // throw new FacebookVerifyFailedError(jsonBody.error)
+          res.status(500).send({ name: 'FacebookVerifyFailed', status: 500, message: jsonBody.error })
         } else if (response && body) {
-          console.log('statusCode:', response && response.statusCode);
           body = JSON.parse(body);
           let name = body.name;
           let facebookId = body.id;
@@ -175,7 +169,7 @@ userRoute.post('/fb/verify_token', (req, res) => {
       });
 
   } catch (error) {
-    return (res, error) => res.status(500).send(error.message)
+    res.send(error)
   }
 });
 
@@ -198,7 +192,6 @@ userRoute.post('/add', async (req, res) => {
   try {
     res.setHeader('Content-Type', 'application/json');
     let user = req.body.data;
-    console.log(JSON.stringify(user));
 
     if (user === undefined || user === "") {
       res.send(JSON.stringify({ status: "error", value: "user undefined" }));
@@ -215,7 +208,7 @@ userRoute.post('/add', async (req, res) => {
 userRoute.put('/update', auth, async (req, res) => {
   try {
 
-    await userDb.updateUser(req.user.id ,req.body.data, res);
+    await userDb.updateUser(req.user.id, req.body.data, res);
 
   } catch (error) {
     return handlePageError(res, error);

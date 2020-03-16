@@ -1,3 +1,5 @@
+const ErrorCode = require('./ErrorCode');
+
 class ApplicationError extends Error {
     constructor(message, status) {
         super();
@@ -7,9 +9,9 @@ class ApplicationError extends Error {
         this.name = this.constructor.name;
 
         this.message = message ||
-            'Something went wrong. Please try again!';
+            'Ops! Something went wrong. Please try again!';
 
-        this.status = status || 500;
+        this.status = status || ErrorCode.APPLICATION_ERROR;
     }
 };
 

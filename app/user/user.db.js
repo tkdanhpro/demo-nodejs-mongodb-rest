@@ -3,7 +3,15 @@ const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken');
 const validator = require('validator');
 
+const ApplicationError = require('./../core/error/ApplicationError');
 const InvalidFullNameError = require('./../core/error/InvalidFullNameError');
+const WrongEmailFormatError = require('./../core/error/WrongEmailFormatError');
+const EmailAlreadyExistsError = require('./../core/error/EmailAlreadyExistsError');
+const UsernameAlreadyExistsError = require('./../core/error/UsernameAlreadyExistsError');
+const PasswordLengthRequireError = require('./../core/error/PasswordLengthRequireError');
+const AuthenticationFailedError = require('./../core/error/AuthenticationFailedError');
+const InvalidUsernameError = require('./../core/error/InvalidUsernameError');
+const UsernameLengthRequireError = require('./../core/error/UsernameLengthRequireError');
 
 const JWT_KEY = '@Money!Xi@oLin$@Tranvan2@@';
 
@@ -47,9 +55,8 @@ async function generateGoogleAuthToken(user) {
 async function addUser(user) {
     if (user.passwordHash !== undefined & user.passwordHash !== '') {
         user.passwordHash = await bcrypt.hash(user.passwordHash, 8);
-        console.log("user.passwordHash ", user.passwordHash)
     }
-    console.log("create result ", user);
+    
     await user.save();
     switch (user.type) {
         case "FACEBOOK":
@@ -70,12 +77,12 @@ const findByCredentials = async (username, passwordHash) => {
     const user = await UserModel.findOne({ username });
  
     if (!user) {
-        throw new Error('Invalid login credentials');
+        throw new ApplicationError('Invalid login credentials');
     }
     const isPasswordMatch = await bcrypt.compare(passwordHash, user.passwordHash);
    
     if (!isPasswordMatch) {
-        throw new Error('Invalid login credentials')
+        throw new ApplicationError('Invalid login credentials')
     }
     return user
 };
@@ -96,10 +103,9 @@ module.exports = {
             res.send({ user, token })
         }
         else {
-            console.log("user not found! => create new user");
             let newUser = new UserModel(userData);
             await addUser(newUser);
-            res.send({ "user" : newUser, 'token': newUser.tokens[0].token }) 
+            res.send({ user : newUser, token: newUser.tokens[0].token }) 
 
         }
     },
@@ -115,14 +121,13 @@ module.exports = {
         });
         
         if (user !== null && Object.keys(user)) {
-
             const token = await generateAuthToken(user)
             res.send({ user, token })
         }
         else {
             let newUser = new UserModel(userData);
             await addUser(newUser);
-            res.send({ 'user': newUser, 'token': newUser.tokens[0].token })
+            res.send({ user: newUser, token: newUser.tokens[0].token })
         }
     },
 
@@ -145,81 +150,83 @@ module.exports = {
                 return token.token != req.token
             })
             await req.user.save()
-            res.send()
+            res.send({ status: 200, message: 'Sign out!'})
         } catch (err) {
-            res.status(400).send(JSON.stringify({ status: "error", value: err.toString() }));
+            res.status(400).send({ status: "error", value: err.toString() });
         }
     },
 
-    signInWithPassword: async (data, res) => {
+    signInWithPassword: async (req, res) => {
         try {
+            const data = req.body.data;
+            const lang = req.header('lang') || 'en';
             const user = await findByCredentials(data.username, data.passwordHash);
             if (!user) {
-                return res.status(401).send({ status: "error", value: 'Login failed! Check authentication credentials' })
+                throw new AuthenticationFailedError(lang);
             }
             const token = await generateAuthToken(user)
             res.send({ user, token })
         } catch (err) {
-            res.status(400).send(JSON.stringify({ status: "error", value: err.toString() }));
+            res.status(400).send(err);
         }
     },
 
-    signUpWithPassword: async (data, res) => {
+    signUpWithPassword: async (req, res) => {
         try {
-
+            const data = req.body.data;
+            const lang = req.header('lang') || 'en';
             // Validate full name
             if (data.fullName.length < 2) {
-                throw new InvalidFullNameError('vi');
-                // res.send({ code: 1 , status: "error", message: "Full name must be greater than 2 characters!" });
-                return
+                throw new InvalidFullNameError(lang)
             }
 
             // If sign up with email
-            const emailInput = data.email;
-            
-            if (emailInput.length && !validator.isEmail(emailInput)) {
-                res.send(JSON.stringify({ status: "error", value: "Wrong email format!" }));
-                return
-            }
-            const existEmail = await UserModel.find({ email: emailInput });
-           
-            if (existEmail != undefined && Object.keys(existEmail).length) {                
-                res.send(JSON.stringify({ status: "error", value: "Email already exists!" }));
-                return
-            }
+            // console.log('existEmail ', existEmail)
+            // const emailInput = data.email;            
+            // if (emailInput.length && !validator.isEmail(emailInput)) {
+            //     throw new WrongEmailFormatError(lang)
+            // }
+            // if (emailInput.length) {
+                
+            //     const existEmail = await UserModel.find({ email: emailInput });
+                
+            //     if (existEmail != undefined && Object.keys(existEmail).length) {                
+            //         throw new EmailAlreadyExistsError(lang)
+            //     }
+            // }            
 
             // If sign up by user name
             const username = data.username;
+            
             if (username == undefined || username == '' || /\s/.test(username)) {
-                res.send(JSON.stringify({ status: "error", value: "Invalid username!" }));
-                return
+                throw new InvalidUsernameError(lang);
             }
             if (username.length < 6) {
-                res.send(JSON.stringify({ status: "error", value: "Username must be greater than 6 characters!" }));
-                return
+                throw new UsernameLengthRequireError(lang);
             }
-
+           
             let existUser = Object.assign({}, await UserModel.find({ username: username }));
 
             if (existUser != undefined && Object.keys(existUser).length) {
-                //throw new Error("Email already exists!");
-                res.send(JSON.stringify({ status: "error", value: "Username already exists!" }));
-                return
+                throw new UsernameAlreadyExistsError(lang);                
             }
             if (data.passwordHash.length < 6) {
-                //throw new Error("Password length must be greater than 6 characters!")
-                res.send({ status: "error", value: "Password length must be greater than 6 characters!" });
-                return
+                throw new PasswordLengthRequireError(lang)
+                
             }
+            
             // register normal new user
             data.type = "NORMAL";
+            
 
             const newUser = new UserModel(data);
             await addUser(newUser);
+            
 
-            res.status(201).send({ "user": newUser, 'token': newUser.tokens[0].token });
+            res.status(201).send({ user: newUser, token: newUser.tokens[0].token });
         } catch (err) {
-            res.send(err);
+            
+            res.status(404).send(err);
         }
 
     },
