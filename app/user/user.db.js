@@ -180,7 +180,8 @@ module.exports = {
             const data = req.body.data;
 
             // Validate full name
-            if (fullNameRegex.test(data.fullName)) {
+            if (!fullNameRegex.test(data.fullName)) {
+                console.log(data.fullName)
                 throw new InvalidFullNameError()
             }
 
@@ -200,7 +201,7 @@ module.exports = {
             // If sign up by user name
             const username = data.username;
             
-            if (username == undefined || username == '' || usernameRegex.test(username)) {
+            if (username == undefined || username == '' || !usernameRegex.test(username)) {
                 throw new InvalidUsernameError();
             }
             if (username.length < 6) {
@@ -215,7 +216,7 @@ module.exports = {
             if (data.passwordHash.length < 6) {
                 throw new PasswordLengthRequireError()                
             }
-            if (passwordRegex.test(data.passwordHash)) {
+            if (!passwordRegex.test(data.passwordHash)) {
                 throw new InvalidPasswordError();
             }
             

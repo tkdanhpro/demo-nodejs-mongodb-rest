@@ -3,7 +3,7 @@ const ErrorCode = require('./ErrorCode');
 
 class InvalidFullNameError extends ApplicationError {
     constructor(message) {
-        super(message || 'Full name must be greater than 2 characters!', ErrorCode.INVALID_FULL_NAME);        
+        super(message || 'Invalid full name!', ErrorCode.INVALID_FULL_NAME);        
     }
 }
 
