@@ -222,7 +222,8 @@ module.exports = {
             
             // register normal new user
             data.type = "NORMAL";            
-
+            data.totalSpentAmount = 0;
+            data.totalLoanAmount = 0;
             const newUser = new UserModel(data);
             await addUser(newUser);            
 
