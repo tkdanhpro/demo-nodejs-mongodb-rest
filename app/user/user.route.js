@@ -2,9 +2,7 @@ const express = require("express");
 const request = require('request');
 const userDb = require('./user.db');
 const auth = require('../core/middleware/auth');
-
-const GoogleVerifyFailedError = require('./../core/error/GoogleVerifyFailedError');
-const FacebookVerifyFailedError = require('./../core/error/FacebookVerifyFailedError');
+const ErrorCode = require('./../core/error/ErrorCode');
 
 const userRoute = express.Router();
 
@@ -85,9 +83,8 @@ userRoute.post('/gg/verify_token', (req, res) => {
         const jsonBody = JSON.parse(body);
 
         if (jsonBody.error) {
-          console.log("jsonBody.error ", jsonBody.error);
           // throw new GoogleVerifyFailedError("jsonBody.error");
-          res.status(500).send({ name: 'GoogleVerifyFailed', status: 500, message: jsonBody.error })
+          res.status(500).send({ name: 'GoogleVerifyFailed', status: ErrorCode.GOOGLE_VERIFY_FAILED, message: jsonBody.error })
         } else if (response && body) {
           body = JSON.parse(body);
           let fullName = body.name;
@@ -142,8 +139,8 @@ userRoute.post('/fb/verify_token', (req, res) => {
       function (error, response, body) {
         const jsonBody = JSON.parse(body);
         if (jsonBody.error) {
-          // throw new FacebookVerifyFailedError(jsonBody.error)
-          res.status(500).send({ name: 'FacebookVerifyFailed', status: 500, message: jsonBody.error })
+          // throw new FacebookVerifyFailedError(jsonBody.error.message);
+          res.status(500).send({ name: 'FacebookVerifyFailed', status: ErrorCode.FACEBOOK_VERIFY_FAILED, message: jsonBody.error.message })
         } else if (response && body) {
           body = JSON.parse(body);
           let name = body.name;

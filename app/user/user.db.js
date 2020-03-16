@@ -159,10 +159,9 @@ module.exports = {
     signInWithPassword: async (req, res) => {
         try {
             const data = req.body.data;
-            const lang = req.header('lang') || 'en';
             const user = await findByCredentials(data.username, data.passwordHash);
             if (!user) {
-                throw new AuthenticationFailedError(lang);
+                throw new AuthenticationFailedError();
             }
             const token = await generateAuthToken(user)
             res.send({ user, token })
@@ -174,58 +173,53 @@ module.exports = {
     signUpWithPassword: async (req, res) => {
         try {
             const data = req.body.data;
-            const lang = req.header('lang') || 'en';
+
             // Validate full name
             if (data.fullName.length < 2) {
-                throw new InvalidFullNameError(lang)
+                throw new InvalidFullNameError()
             }
 
             // If sign up with email
-            // console.log('existEmail ', existEmail)
-            // const emailInput = data.email;            
-            // if (emailInput.length && !validator.isEmail(emailInput)) {
-            //     throw new WrongEmailFormatError(lang)
-            // }
-            // if (emailInput.length) {
+            const emailInput = data.email;    
+            if (emailInput.length && !validator.isEmail(emailInput)) {
+                throw new WrongEmailFormatError()
+            }
+            if (emailInput.length) {                
+                const existEmail = await UserModel.find({ email: emailInput });
                 
-            //     const existEmail = await UserModel.find({ email: emailInput });
-                
-            //     if (existEmail != undefined && Object.keys(existEmail).length) {                
-            //         throw new EmailAlreadyExistsError(lang)
-            //     }
-            // }            
+                if (existEmail != undefined && Object.keys(existEmail).length) {                
+                    throw new EmailAlreadyExistsError()
+                }
+            }            
 
             // If sign up by user name
             const username = data.username;
             
             if (username == undefined || username == '' || /\s/.test(username)) {
-                throw new InvalidUsernameError(lang);
+                throw new InvalidUsernameError();
             }
             if (username.length < 6) {
-                throw new UsernameLengthRequireError(lang);
+                throw new UsernameLengthRequireError();
             }
            
             let existUser = Object.assign({}, await UserModel.find({ username: username }));
 
             if (existUser != undefined && Object.keys(existUser).length) {
-                throw new UsernameAlreadyExistsError(lang);                
+                throw new UsernameAlreadyExistsError();                
             }
             if (data.passwordHash.length < 6) {
-                throw new PasswordLengthRequireError(lang)
+                throw new PasswordLengthRequireError()
                 
             }
             
             // register normal new user
-            data.type = "NORMAL";
-            
+            data.type = "NORMAL";            
 
             const newUser = new UserModel(data);
-            await addUser(newUser);
-            
+            await addUser(newUser);            
 
             res.status(201).send({ user: newUser, token: newUser.tokens[0].token });
         } catch (err) {
-            
             res.status(404).send(err);
         }
 
