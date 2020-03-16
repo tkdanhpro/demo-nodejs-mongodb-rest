@@ -12,6 +12,7 @@ const PasswordLengthRequireError = require('./../core/error/PasswordLengthRequir
 const AuthenticationFailedError = require('./../core/error/AuthenticationFailedError');
 const InvalidUsernameError = require('./../core/error/InvalidUsernameError');
 const UsernameLengthRequireError = require('./../core/error/UsernameLengthRequireError');
+const InvalidPasswordError = require('./../core/error/InvalidPasswordError');
 
 const JWT_KEY = '@Money!Xi@oLin$@Tranvan2@@';
 
@@ -172,10 +173,14 @@ module.exports = {
 
     signUpWithPassword: async (req, res) => {
         try {
+            const usernameRegex = /^[a-zA-Z0-9]+$/
+            const passwordRegex = /^[a-zA-Z0-9]*\S{6,}$/
+            const fullNameRegex = /^[a-zA-Z0-9]+$/
+
             const data = req.body.data;
 
             // Validate full name
-            if (data.fullName.length < 2) {
+            if (fullNameRegex.test(data.fullName)) {
                 throw new InvalidFullNameError()
             }
 
@@ -195,7 +200,7 @@ module.exports = {
             // If sign up by user name
             const username = data.username;
             
-            if (username == undefined || username == '' || /\s/.test(username)) {
+            if (username == undefined || username == '' || usernameRegex.test(username)) {
                 throw new InvalidUsernameError();
             }
             if (username.length < 6) {
@@ -208,8 +213,10 @@ module.exports = {
                 throw new UsernameAlreadyExistsError();                
             }
             if (data.passwordHash.length < 6) {
-                throw new PasswordLengthRequireError()
-                
+                throw new PasswordLengthRequireError()                
+            }
+            if (passwordRegex.test(data.passwordHash)) {
+                throw new InvalidPasswordError();
             }
             
             // register normal new user
