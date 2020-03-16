@@ -3,6 +3,8 @@ const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken');
 const validator = require('validator');
 
+const InvalidFullNameError = require('./../core/error/InvalidFullNameError');
+
 const JWT_KEY = '@Money!Xi@oLin$@Tranvan2@@';
 
 async function generateAuthToken(user) {
@@ -66,12 +68,12 @@ async function addUser(user) {
 
 const findByCredentials = async (username, passwordHash) => {
     const user = await UserModel.findOne({ username });
-    console.log("find user ", user);
+ 
     if (!user) {
         throw new Error('Invalid login credentials');
     }
     const isPasswordMatch = await bcrypt.compare(passwordHash, user.passwordHash);
-    console.log("isPasswordMatch user ", isPasswordMatch);
+   
     if (!isPasswordMatch) {
         throw new Error('Invalid login credentials')
     }
@@ -113,14 +115,14 @@ module.exports = {
         });
         
         if (user !== null && Object.keys(user)) {
-            console.log("user found! " + user);
+
             const token = await generateAuthToken(user)
             res.send({ user, token })
         }
         else {
             let newUser = new UserModel(userData);
             await addUser(newUser);
-            res.send({ user, 'token': newUser.tokens[0].token })
+            res.send({ user: newUser, 'token': newUser.tokens[0].token })
         }
     },
 
@@ -151,8 +153,6 @@ module.exports = {
 
     signInWithPassword: async (data, res) => {
         try {
-            const userInfo = Object.assign(data);
-            console.log("userInfo ", userInfo);
             const user = await findByCredentials(data.username, data.passwordHash);
             if (!user) {
                 return res.status(401).send({ status: "error", value: 'Login failed! Check authentication credentials' })
@@ -168,14 +168,13 @@ module.exports = {
         try {
 
             // Validate full name
-
-            if (data.fullName.length < 6) {
-                res.send(JSON.stringify({ status: "error", value: "Full name must be greater than 6 characters!" }));
+            if (data.fullName.length < 2) {
+                throw new InvalidFullNameError('vi');
+                // res.send({ code: 1 , status: "error", message: "Full name must be greater than 2 characters!" });
                 return
             }
 
             // If sign up with email
-            console.log("data ", data.email);
             const emailInput = data.email;
             
             if (emailInput.length && !validator.isEmail(emailInput)) {
@@ -200,36 +199,27 @@ module.exports = {
                 return
             }
 
-            let existUser = {};
-            if (validator.isEmail(username)) {
-                data.email = username;
-                existUser = Object.assign({}, await UserModel.find({ email: username }));
-            } else {
-                existUser = Object.assign({}, await UserModel.find({ username: username }));
-            }
-
-            console.log("existUser ", existUser);
+            let existUser = Object.assign({}, await UserModel.find({ username: username }));
 
             if (existUser != undefined && Object.keys(existUser).length) {
                 //throw new Error("Email already exists!");
-                console.log("user exists! ");
                 res.send(JSON.stringify({ status: "error", value: "Username already exists!" }));
                 return
             }
-            if (data.passwordHash.length < 8) {
-                //throw new Error("Password length must be greater than 8 characters!")
-                res.send(JSON.stringify({ status: "error", value: "Password length must be greater than 8 characters!" }));
+            if (data.passwordHash.length < 6) {
+                //throw new Error("Password length must be greater than 6 characters!")
+                res.send({ status: "error", value: "Password length must be greater than 6 characters!" });
                 return
             }
-            // register new user
+            // register normal new user
             data.type = "NORMAL";
 
             const newUser = new UserModel(data);
             await addUser(newUser);
 
-            res.status(201).send({ status: "ok", "newUser": user, 'token': newUser.tokens[0].token });
+            res.status(201).send({ "user": newUser, 'token': newUser.tokens[0].token });
         } catch (err) {
-            res.send(JSON.stringify({ status: "Error! Something went wrong!", value: err }));
+            res.send(err);
         }
 
     },
