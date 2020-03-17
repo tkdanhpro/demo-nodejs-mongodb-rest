@@ -205,11 +205,19 @@ userRoute.post('/add', async (req, res) => {
 userRoute.put('/update', auth, async (req, res) => {
   try {
 
-    await userDb.updateUser(req.user.id, req.body.data, res);
+    await userDb.updateUserInfo(req, res);
 
   } catch (error) {
     return handlePageError(res, error);
   }
+});
+
+userRoute.put('/changePassword', auth, async (req, res) => {
+try {
+  await userDb.changePassword(req, res)
+} catch (error) {
+  return handlePageError(res, error);
+}
 });
 
 const handlePageError = (res, e) => res.status(500).send(e.message)

@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 
-
 const users = mongoose.model('users', new mongoose.Schema({
     username: {
         type: String,
@@ -14,8 +13,15 @@ const users = mongoose.model('users', new mongoose.Schema({
         required: true,
         trim: true
     },   
-    birthDay: Date,
-    gender: String,
+    birthday: {
+        type: Date,
+        min: '1900-01-01',
+        max: '2020-01-01'
+    },
+    gender: {
+        type: String,
+        enum: ['MALE', 'FEMALE']
+    },
     phoneNumber: String,
     email: {
         type: String,
@@ -38,13 +44,15 @@ const users = mongoose.model('users', new mongoose.Schema({
             }
         }
     ],
-    type: String,
-    gender: String,
+    type: {
+        type: String,
+        enum: ['FACEBOOK', 'GOOGLE', 'NORMAL']
+    },
+    
     platform: String,
     provider: String,
     picture: String,
     status: String,
-    birthDay: String,
     facebookId: {
         type: String,
         trim: true,
