@@ -12,6 +12,7 @@ module.exports = {
             data.status = 'OPENING';
             data.totalAmount = 0;
             data.remainAmount = 0;
+            data.members = data.members.concat(user._id);
 
             const note = new NoteModel(data);
             await note.save();
@@ -26,11 +27,11 @@ module.exports = {
     getNotes: async (req, res) => {
         try {
             const id = req.user._id;
-            const notes = await NoteModel.find({status: 'OPENING'}).populate({
-                path: 'users',
-                match: { _id: id },
-                select: 'username'
-            }).exec()
+            const notes = await NoteModel.find({status: 'OPENING'})
+            .populate('members', 'username fullName picture -_id', {_id: id})
+            .populate('createdBy', 'username fullName picture -_id')
+            .populate('admin', 'username fullName picture -_id')
+
             res.status(201).send({ notes });
         } catch (err) {
             res.status(404).send(err);
@@ -39,7 +40,29 @@ module.exports = {
     },
 
     updateNote: async (req, res) => {
+        try {
+            const id = req.user._id;
+            const notes = await NoteModel.aggregate(
+                {
+                    $lookup:
+                     {
+                       from: 'users',
+                       localField: 'members',
+                       foreignField: '_id',
+                       as: 'members'
+                     }
+                  }
+            ).find({status: 'OPENING'})
+            .populate('members', 'username fullName picture -_id')
+            .populate('createdBy', 'username fullName picture -_id')
+            .populate('admin', 'username fullName picture -_id')
+            
+        
 
+            res.status(201).send({ notes });
+        } catch (err) {
+            res.status(404).send(err);
+        }
     },
 
     finishNote: async (req, res) => {

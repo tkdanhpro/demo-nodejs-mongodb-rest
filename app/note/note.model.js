@@ -32,8 +32,14 @@ const notes = mongoose.model('notes', new mongoose.Schema({
         type: String,
         enum: ['OPENING', 'LOCKED', 'FINISHED', 'CLOSED']
     },
-    totalAmount: Number,
-    remainAmount: Number
+    totalAmount: {
+        type: Number,
+        default: 0
+    },
+    remainAmount: {
+        type: Number,
+        default: 0
+    }
 }, {
     timestamps: {
         createdAt: 'created_at',
