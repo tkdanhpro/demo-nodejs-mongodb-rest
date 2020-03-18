@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
 
 const users = mongoose.model('users', new mongoose.Schema({
     username: {
@@ -76,7 +77,14 @@ const users = mongoose.model('users', new mongoose.Schema({
         version: String,
         appId: String
 
-    }
+    },
+
+    notes: [
+        {
+            type: Schema.Types.ObjectId,
+            ref: 'notes'
+        }
+    ],  
 }, {
     timestamps: {
         createdAt: 'created_at',
