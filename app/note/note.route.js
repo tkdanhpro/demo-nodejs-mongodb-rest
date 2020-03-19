@@ -6,6 +6,16 @@ const ErrorCode = require('./../core/error/ErrorCode');
 
 const noteRoute = express.Router();
 
+noteRoute.get('/:id', auth, async (req, res, next) => {
+    try {
+        await noteDb.getById(req, res)
+
+    } catch (err) {
+        next();
+        res.status(500).send(err.message)
+    }
+});
+
 noteRoute.get('/me', auth, async (req, res, next) => {
     try {
         await noteDb.getNotes(req, res)

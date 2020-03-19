@@ -30,9 +30,14 @@ const notes = mongoose.model('notes', new mongoose.Schema({
     ],
     status: {
         type: String,
-        enum: ['OPENING', 'LOCKED', 'FINISHED', 'CLOSED']
+        enum: ['OPENING', 'LOCKED', 'FINISHED', 'CLOSED'],
+        default: 'OPENING'
     },
-    totalAmount: {
+    totalCashIn: {
+        type: Number,
+        default: 0
+    },
+    totalCashOut: {
         type: Number,
         default: 0
     },

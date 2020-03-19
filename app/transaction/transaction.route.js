@@ -6,9 +6,10 @@ const ErrorCode = require('./../core/error/ErrorCode');
 
 const transRoute = express.Router();
 
-transRoute.get('/me', auth, async (req, res, next) => {
+transRoute.get('/:noteId', auth, async (req, res, next) => {
     try {
-        await transDb.getTrans(req, res)
+        const noteId = req.params.noteId;
+        await transDb.getTrans(noteId, res)
 
     } catch (err) {
         next();

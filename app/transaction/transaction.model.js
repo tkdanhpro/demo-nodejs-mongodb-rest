@@ -6,30 +6,60 @@ const transactions = mongoose.model('transactions', new mongoose.Schema({
         type: Schema.Types.ObjectId,
         ref: 'users'
     },
+    note: {
+        type: Schema.Types.ObjectId,
+        ref: 'notes'
+    },
     type: {
         type: String,
         enum: ['IN', 'OUT']
     },
-    value: Number,    
+    value: {
+        type: Number,
+        required: true,
+        default: 1000
+    },    
     title: {
         type: String,
         required: true,
         trim: true
     },
     description: String,
-    subMembers: [
+    equal: {
+        type: Boolean,
+        default: true
+    },
+    payments: [
         {
-            type: Schema.Types.ObjectId,
-            ref: 'users',
-            subAmount: Number
+            user: [
+                {
+                    type: Schema.Types.ObjectId,
+                    ref: 'users'
+                }
+            ],
+            value: {
+                type: Number,
+                required: true,
+                default: 0
+            },
+            type: {
+                type: String,
+                enum: ['CASHBACK', 'DEBT']
+            }
+
         }
     ],
+    
     status: {
         type: String,
-        enum: ['OPENING', 'LOCKED', 'FINISHED', 'CLOSED']
+        enum: ['ACTIVE', 'INACTIVE'],
+        default: 'ACTIVE'
     },
     
-    deleted: Boolean
+    deleted: {
+        type: Boolean,
+        default: false
+    }
 
 }, {
     timestamps: {
