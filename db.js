@@ -30,6 +30,11 @@ module.exports = {
     },
     // Common end...
 
+    // close connection database
+    closeConnectDB: function() {
+        mongoose.connection.close();
+        console.log("DB close connection!");
+    },
     
 
     // Wallet history start...
