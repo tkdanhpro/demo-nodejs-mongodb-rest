@@ -37,4 +37,14 @@ transRoute.put('/update', auth, async (req, res, next) => {
     }
 });
 
+transRoute.put('/complete', auth, async (req, res, next) => {
+    try {
+        await transDb.completeTrans(req, res)
+
+    } catch (err) {
+        next();
+        res.status(500).send(err.message)
+    }
+});
+
 module.exports = transRoute;
