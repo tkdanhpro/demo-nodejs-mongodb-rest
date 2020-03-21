@@ -49,6 +49,7 @@ module.exports = {
                 note.totalCashIn += data.value;
             }
 
+            note.transactions = note.transactions.concat(trans)
             await note.save();
             res.status(201).send({ trans });
 
@@ -67,26 +68,6 @@ module.exports = {
 
             const data = req.body.data;
             data.updatedBy = req.user._id;
-            const trans = await TransModel.findByIdAndUpdate({ _id: req.body.data._id }, data, { new: true });
-
-            res.status(201).send({ trans });
-
-        } catch (err) {
-            res.status(404).send(err);
-        }
-    },
-
-    completeTrans: async (req, res) => {
-        try {
-            const ts = await TransModel.findById(req.body.data._id);
-            if (!ts) {
-                throw new TransNotFoundError()
-            }
-            if (ts.status == 'COMPLETED') {
-                throw new TransCompletedError()
-            }
-
-            const data = req.body.data;
 
             data.payments.forEach(element => {
                 if (element.user == data.payer) {
@@ -111,32 +92,41 @@ module.exports = {
                 data.payments = data.payments.concat(payerUser)
             }
 
-            // data.remainAmount = data.value - amount*numberOfUsers;
-            data.updatedBy = req.user._id;
-            data.status = 'COMPLETED';
-            const trans = await TransModel.findByIdAndUpdate({ _id: data._id }, data, { new: true });
+            const trans = await TransModel.findByIdAndUpdate({ _id: req.body.data._id }, data, { new: true });
 
-            // update note
-            const note = await NoteModel.findById(trans.note);
-            if (!note) {
-                throw new NoteNotFoundError()
-            }
-            if (data.type == 'OUT') {
-                note.totalCashOut += data.value;
-            } else {
-                note.totalCashIn += data.value;
-            }
-
-            await note.save();
             res.status(201).send({ trans });
 
         } catch (err) {
             res.status(404).send(err);
         }
     },
+    
+    getById: async (req, res) => {
+        try {
+            const id = req.params.id;
+            const trans = await TransModel.findById(id);
+            if (!trans) {
+                throw new TransNotFoundError()
+            }
+            res.status(201).send({trans})
+        } catch (err) {
+            res.status(404).send(err);
+        }
+    },
 
-    getTrans: async (params, res) => {
-
+    getByNote: async (req, res) => {
+        try {
+            const noteId = req.params.noteId;
+            console.log(noteId)
+            const trans = await TransModel.find({note: noteId});
+            
+            if (!trans) {
+                throw new TransNotFoundError()
+            }
+            res.status(201).send({trans})
+        } catch (err) {
+            res.status(404).send(err);
+        }
     }
 
 }

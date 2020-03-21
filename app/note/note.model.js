@@ -24,13 +24,17 @@ const notes = mongoose.model('notes', new mongoose.Schema({
     ],
     members: [
         {
-            type: Schema.Types.ObjectId,
-            ref: 'users'
+            user: {
+                type: Schema.Types.ObjectId,
+                ref: 'users'
+            },
+            totalPayment: Number,
+            totalRemain: Number
         }
     ],
     status: {
         type: String,
-        enum: ['OPENING', 'LOCKED', 'FINISHED', 'CLOSED'],
+        enum: ['OPENING', 'LOCKED', 'COMPLETED'],
         default: 'OPENING'
     },
     totalCashIn: {
