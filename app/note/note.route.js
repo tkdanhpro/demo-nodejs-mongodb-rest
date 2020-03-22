@@ -18,7 +18,6 @@ noteRoute.get('/id/:id', auth, async (req, res, next) => {
 
 noteRoute.get('/me', auth, async (req, res, next) => {
     try {
-        console.log(req)
         await noteDb.getNotes(req, res)
 
     } catch (err) {
@@ -47,9 +46,9 @@ noteRoute.put('/update', auth, async (req, res, next) => {
     }
 });
 
-noteRoute.post('/complete', auth, async (req, res, next) => {
+noteRoute.put('/changeStatus', auth, async (req, res, next) => {
     try {
-        await noteDb.completeNote(req, res)
+        await noteDb.changeStatus(req, res)
 
     } catch (err) {
         next();

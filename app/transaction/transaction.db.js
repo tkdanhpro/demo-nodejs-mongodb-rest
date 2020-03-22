@@ -16,7 +16,7 @@ module.exports = {
 
             data.createdBy = req.user._id;
 
-            data.payments.forEach(element => {
+            data.payments.forEach((element) => {
                 if (element.user == data.payer) {
                     element.type = 'CASHBACK';
                     element.remain = data.value - element.payment;
@@ -24,7 +24,7 @@ module.exports = {
                     element.type = 'DEBT';
                     element.remain = - element.payment;
                 }
-                return element;
+
             });
 
             const isIncludesPayer = data.payments.filter(p => p.user == data.payer).length > 0;
@@ -37,10 +37,28 @@ module.exports = {
                     type: 'CASHBACK'
                 }
                 data.payments = data.payments.concat(payerUser)
+                
             }
 
+            // update note's data members
+            data.payments.forEach(element => {
+                note.members.map(m => {
+                    if (m.user.equals(element.user)) {
+                        m.totalPayment += element.payment;
+                        m.totalRemain += element.remain;       
+                    }
+                    return m;
+                });
+            })
+
             const trans = new TransModel(data);
-            await trans.save();
+            await trans.save()
+                        .then(t => {
+                            t.populate('payments.user', 'username fullName picture')
+                            .populate('payer', 'username fullName picture')
+                            .populate('createdBy', 'username fullName picture')
+                            .execPopulate()
+                        });
 
             // update note
             if (data.type == 'OUT') {
@@ -48,7 +66,7 @@ module.exports = {
             } else {
                 note.totalCashIn += data.value;
             }
-
+            
             note.transactions = note.transactions.concat(trans)
             await note.save();
             res.status(201).send({ trans });
@@ -92,7 +110,12 @@ module.exports = {
                 data.payments = data.payments.concat(payerUser)
             }
 
-            const trans = await TransModel.findByIdAndUpdate({ _id: req.body.data._id }, data, { new: true });
+            const trans = await TransModel.findByIdAndUpdate({ _id: req.body.data._id }, data, { new: true })
+                .then( t => {
+                    t.populate('payments.user', 'username fullName picture')
+                    .populate('payer', 'username fullName picture')
+                    .populate('createdBy', 'username fullName picture')
+                });
 
             res.status(201).send({ trans });
 
@@ -104,7 +127,10 @@ module.exports = {
     getById: async (req, res) => {
         try {
             const id = req.params.id;
-            const trans = await TransModel.findById(id);
+            const trans = await TransModel.findById(id)
+                .populate('payments.user', 'username fullName picture')
+                .populate('payer', 'username fullName picture')
+                .populate('createdBy', 'username fullName picture');
             if (!trans) {
                 throw new TransNotFoundError()
             }
@@ -117,8 +143,11 @@ module.exports = {
     getByNote: async (req, res) => {
         try {
             const noteId = req.params.noteId;
-            console.log(noteId)
-            const trans = await TransModel.find({note: noteId});
+            
+            const trans = await TransModel.find({note: noteId})
+                .populate('payments.user', 'username fullName picture')
+                .populate('payer', 'username fullName picture')
+                .populate('createdBy', 'username fullName picture');
             
             if (!trans) {
                 throw new TransNotFoundError()

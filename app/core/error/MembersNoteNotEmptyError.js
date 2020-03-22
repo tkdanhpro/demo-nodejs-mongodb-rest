@@ -1,11 +1,11 @@
 const ApplicationError = require('./ApplicationError');
 const ErrorCode = require('./ErrorCode');
 
-class MembersNoteNotEmptyError extends ApplicationError {
+class MembersNoteEmptyError extends ApplicationError {
     constructor(message) {
-        super(message || 'Members could not be empty!', ErrorCode.MEMBER_NOTE_NOT_EMPTY);
+        super(message || 'Members could not be empty!', ErrorCode.MEMBER_NOTE_EMPTY);
        
     }
 }
 
-module.exports = MembersNoteNotEmptyError
+module.exports = MembersNoteEmptyError
