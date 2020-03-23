@@ -56,7 +56,6 @@ module.exports = {
                 .populate('createdBy', 'username fullName picture')
                 .populate('admin', 'username fullName picture')
                 .populate('transactions', 'title type value')
-console.log(results)
             const notes = results.filter(item => item.members.filter(m => m.user).length > 0)
 
             res.status(201).send({ notes });

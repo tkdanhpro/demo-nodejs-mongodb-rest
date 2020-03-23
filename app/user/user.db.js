@@ -291,6 +291,23 @@ module.exports = {
         });
 
         res.status(201).send({ user: updatedUser, token: token });
+    },
+
+    search: async (keyword, res) => {
+        const regKey = new RegExp(keyword);
+        const searchResults = await UserModel.find({ $or: [
+            {'username': regKey},
+            {'email': regKey},
+            {'fullName': regKey}
+        ] })
+        .sort({
+            'username': 1,
+            'email': 1,
+            'fullname': 1
+        })
+        .limit(10);
+
+        res.status(201).send({ searchResults });
     }
 
 }
