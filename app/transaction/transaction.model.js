@@ -18,26 +18,25 @@ const transactions = mongoose.model('transactions', new mongoose.Schema({
         type: Number,
         required: true,
         default: 1000
-    },    
+    },
     title: {
         type: String,
         required: true,
         trim: true
     },
     description: String,
-    equal: {
-        type: Boolean,
-        default: true
-    },
     payments: [
         {
-            user: [
-                {
-                    type: Schema.Types.ObjectId,
-                    ref: 'users'
-                }
-            ],
-            value: {
+            user: {
+                type: Schema.Types.ObjectId,
+                ref: 'users'
+            },
+            payment: {
+                type: Number,
+                required: true,
+                default: 0
+            },
+            remain: {
                 type: Number,
                 required: true,
                 default: 0
@@ -49,13 +48,17 @@ const transactions = mongoose.model('transactions', new mongoose.Schema({
 
         }
     ],
-    
+    payer: {
+        type: Schema.Types.ObjectId,
+        ref: 'users'
+    },
+    remainAmount: Number,
     status: {
         type: String,
-        enum: ['ACTIVE', 'INACTIVE'],
-        default: 'ACTIVE'
+        enum: ['CREATED', 'COMPLETED'],
+        default: 'CREATED'
     },
-    
+
     deleted: {
         type: Boolean,
         default: false

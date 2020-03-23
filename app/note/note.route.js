@@ -6,7 +6,7 @@ const ErrorCode = require('./../core/error/ErrorCode');
 
 const noteRoute = express.Router();
 
-noteRoute.get('/:id', auth, async (req, res, next) => {
+noteRoute.get('/id/:id', auth, async (req, res, next) => {
     try {
         await noteDb.getById(req, res)
 
@@ -46,9 +46,9 @@ noteRoute.put('/update', auth, async (req, res, next) => {
     }
 });
 
-noteRoute.post('/finish', auth, async (req, res, next) => {
+noteRoute.put('/changeStatus', auth, async (req, res, next) => {
     try {
-        await noteDb.finishNote(req, res)
+        await noteDb.changeStatus(req, res)
 
     } catch (err) {
         next();
