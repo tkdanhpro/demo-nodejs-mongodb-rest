@@ -295,7 +295,7 @@ module.exports = {
 
     search: async (req, res) => {
         const keyword = req.params.keyword.toLowerCase();
-        const regKey = new RegExp(keyword);
+        const regKey = new RegExp('^'+ keyword + '$', "i");
         const searchResults = await UserModel.find({
             $or: [
                 { 'username': regKey },
