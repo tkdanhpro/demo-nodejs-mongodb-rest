@@ -56,4 +56,15 @@ noteRoute.put('/changeStatus', auth, async (req, res, next) => {
     }
 });
 
+noteRoute.put('/changeMembers', auth, async (req, res, next) => {
+    try {
+        await noteDb.changeMembers(req, res)
+
+    } catch (err) {
+        next();
+        res.status(500).send(err.message)
+    }
+});
+
+
 module.exports = noteRoute;

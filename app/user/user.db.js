@@ -283,7 +283,7 @@ module.exports = {
         const updatedUser = await UserModel.findByIdAndUpdate(id, { user }, { new: true }, (err, result) => {
             if (err) {
                 console.log(err);
-                res.send(JSON.stringify({ status: "error", value: "Error, db request failed" }));
+                res.send({ status: 500, message: "Error, db request failed" });
                 return
             }
 
@@ -291,6 +291,27 @@ module.exports = {
         });
 
         res.status(201).send({ user: updatedUser, token: token });
+    },
+
+    search: async (req, res) => {
+        const keyword = req.params.keyword;
+        const regKey = new RegExp(keyword);
+        const searchResults = await UserModel.find({
+            $or: [
+                { 'username': regKey },
+                { 'email': regKey },
+                { 'fullName': regKey }
+            ],
+            _id: { $ne: req.user._id }
+        }, { username: 1, fullName: 1, email: 1, picture: 1 })
+            .sort({
+                'username': 1,
+                'email': 1,
+                'fullName': 1
+            })
+            .limit(10);
+
+        res.status(201).send({ searchResults });
     }
 
 }

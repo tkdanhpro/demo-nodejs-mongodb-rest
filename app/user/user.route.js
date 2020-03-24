@@ -191,7 +191,7 @@ userRoute.post('/add', async (req, res) => {
     let user = req.body.data;
 
     if (user === undefined || user === "") {
-      res.send(JSON.stringify({ status: "error", value: "user undefined" }));
+      res.send({ status: "error", value: "user undefined" });
       return
     }
 
@@ -204,20 +204,55 @@ userRoute.post('/add', async (req, res) => {
 
 userRoute.put('/update', auth, async (req, res) => {
   try {
-
     await userDb.updateUserInfo(req, res);
-
   } catch (error) {
     return handlePageError(res, error);
   }
 });
 
 userRoute.put('/changePassword', auth, async (req, res) => {
-try {
-  await userDb.changePassword(req, res)
-} catch (error) {
-  return handlePageError(res, error);
-}
+  try {
+    await userDb.changePassword(req, res)
+  } catch (error) {
+    return handlePageError(res, error);
+  }
+});
+
+userRoute.get('/search/:keyword', auth, async (req, res) => {
+  try {
+    userDb.search(req, res)
+
+  } catch (error) {
+    return handlePageError(res, error)
+  }
+});
+
+// for friends function
+userRoute.get('/friends/list', auth, async (req, res) => {
+  try {
+    userDb.getFriends(req, res)
+
+  } catch (error) {
+    return handlePageError(res, error)
+  }
+});
+
+userRoute.post('/friends/add', auth, async (req, res) => {
+  try {
+    userDb.addFriends(req, res)
+
+  } catch (error) {
+    return handlePageError(res, error)
+  }
+});
+
+userRoute.put('/friends/update', auth, async (req, res) => {
+  try {
+    userDb.updateFriends(req, res)
+
+  } catch (error) {
+    return handlePageError(res, error)
+  }
 });
 
 const handlePageError = (res, e) => res.status(500).send(e.message)

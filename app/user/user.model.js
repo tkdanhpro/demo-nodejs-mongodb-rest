@@ -13,7 +13,7 @@ const users = mongoose.model('users', new mongoose.Schema({
         type: String,
         required: true,
         trim: true
-    },   
+    },
     birthday: {
         type: Date,
         min: '1900-01-01',
@@ -35,7 +35,7 @@ const users = mongoose.model('users', new mongoose.Schema({
         //     }
         // }
     },
- 
+
     passwordHash: String,
     tokens: [
         {
@@ -49,7 +49,7 @@ const users = mongoose.model('users', new mongoose.Schema({
         type: String,
         enum: ['FACEBOOK', 'GOOGLE', 'NORMAL']
     },
-    
+
     platform: String,
     provider: String,
     picture: String,
@@ -84,7 +84,18 @@ const users = mongoose.model('users', new mongoose.Schema({
             type: Schema.Types.ObjectId,
             ref: 'notes'
         }
-    ],  
+    ],
+    friends: [
+        { 
+            user: {
+                type: Schema.Types.ObjectId, ref: 'users'
+            },
+            deleted: {
+                type: Boolean,
+                default: false
+            }
+         }
+    ]
 }, {
     timestamps: {
         createdAt: 'created_at',
