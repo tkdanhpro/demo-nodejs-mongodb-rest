@@ -220,9 +220,7 @@ userRoute.put('/changePassword', auth, async (req, res) => {
 
 userRoute.get('/search/:keyword', auth, async (req, res) => {
   try {
-    let keyword = req.params.keyword;
-
-    userDb.search(keyword, res)
+    userDb.search(req, res)
 
   } catch (error) {
     return handlePageError(res, error)
