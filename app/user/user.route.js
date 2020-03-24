@@ -227,6 +227,34 @@ userRoute.get('/search/:keyword', auth, async (req, res) => {
   }
 });
 
+// for friends function
+userRoute.get('/friends/list', auth, async (req, res) => {
+  try {
+    userDb.getFriends(req, res)
+
+  } catch (error) {
+    return handlePageError(res, error)
+  }
+});
+
+userRoute.post('/friends/add', auth, async (req, res) => {
+  try {
+    userDb.addFriends(req, res)
+
+  } catch (error) {
+    return handlePageError(res, error)
+  }
+});
+
+userRoute.put('/friends/update', auth, async (req, res) => {
+  try {
+    userDb.updateFriends(req, res)
+
+  } catch (error) {
+    return handlePageError(res, error)
+  }
+});
+
 const handlePageError = (res, e) => res.status(500).send(e.message)
 
 module.exports = userRoute;

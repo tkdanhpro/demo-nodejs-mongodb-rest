@@ -39,6 +39,10 @@ const notes = mongoose.model('notes', new mongoose.Schema({
             totalRemain: {
                 type: Number,
                 default: 0
+            },
+            deleted: {
+                type: Boolean,
+                default: false
             }
         }
     ],

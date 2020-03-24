@@ -75,23 +75,32 @@ module.exports = {
             if (completedNote) {
                 throw new NoteCompletedError()
             }
-
+            data.members.forEach(mem => {
+                if (mem.isLeft && mem.totalPayment == 0 && mem.totalRemain == 0)  
+                    mem.deleted = true;
+                    return mem
+            });
+            
             const note = await NoteModel.findOneAndUpdate({ _id, admin }, data, { new: true }, (err, result) => {
                 if (err) {
                     console.log(err);
                     res.send({ status: 500, message: "Error, db request failed" });
                     return
                 }
+                return 
 
-            }).then(n => n.populate('members.user', 'username fullName picture')
+            }).then(note => note.filter(n => n)
+                .populate('members.user', 'username fullName picture')
                 .populate('admin', 'username fullName picture')
                 .execPopulate());
+
             if (!note) throw new PermissionDeniedError();
             res.status(201).send({ note });
         } catch (err) {
             res.status(404).send(err);
         }
     },
+
     changeStatus: async (req, res) => {
         try {
             const noteId = req.body.id;
