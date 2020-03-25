@@ -18,7 +18,7 @@ noteRoute.get('/id/:id', auth, async (req, res, next) => {
 
 noteRoute.get('/me', auth, async (req, res, next) => {
     try {
-        await noteDb.getNotes(req, res)
+        await noteDb.getUserNotes(req, res)
 
     } catch (err) {
         next();

@@ -34,12 +34,12 @@ module.exports = {
             const notes = await NoteModel.findById(req.params.id)
                 .populate({
                     path: 'transactions',
-                    select: 'title type value',
-                    // populate: {path: 'payments', select: 'fullName -_id'}
+                    select: 'title type value payments',
+                    populate: {path: 'payments.user', select: 'username fullName picture -_id'}
                 })
-                .populate('members.user', 'username fullName picture')
-                .populate('createdBy', 'username fullName picture')
-                .populate('admin', 'username fullName picture')
+                .populate('members.user', 'username fullName picture -_id')
+                .populate('createdBy', 'username fullName picture -_id')
+                .populate('admin', 'username fullName picture -_id')
 
             res.status(201).send({ notes });
         } catch (err) {
@@ -48,15 +48,16 @@ module.exports = {
 
     },
 
-    getNotes: async (req, res) => {
+    getUserNotes: async (req, res) => {
         try {
             const _id = req.user._id;
             console.log('user ', _id)
-            const results = await NoteModel.find({ 'members.user': { '$eq': _id, '$exists': true } })
-                .populate('members.user', 'username fullName picture')
-                .populate('createdBy', 'username fullName picture')
-                .populate('admin', 'username fullName picture')
-                .populate('transactions', 'title type value')
+            const results = await NoteModel.find({ 'members.user': { '$eq': _id, '$exists': true } }
+                , { name: 1, description: 1, status: 1, totalCashIn: 1, totalCashOut: 1, remainAmount: 1, created_at: 1, updated_at: 1, 'members.user': 1 })
+                .populate('members.user', 'username fullName picture  -_id')
+            // .populate('createdBy', 'username fullName picture')
+            // .populate('admin', 'username fullName picture')
+            // .populate('transactions', 'title type value')
             const notes = results.filter(item => item.members.filter(m => m.user).length > 0)
 
             res.status(201).send({ notes });
@@ -76,18 +77,18 @@ module.exports = {
                 throw new NoteCompletedError()
             }
             data.members.forEach(mem => {
-                if (mem.isLeft && mem.totalPayment == 0 && mem.totalRemain == 0)  
+                if (mem.isLeft && mem.totalPayment == 0 && mem.totalRemain == 0)
                     mem.deleted = true;
-                    return mem
+                return mem
             });
-            
+
             const note = await NoteModel.findOneAndUpdate({ _id, admin }, data, { new: true }, (err, result) => {
                 if (err) {
                     console.log(err);
                     res.send({ status: 500, message: "Error, db request failed" });
                     return
                 }
-                return 
+                return
 
             }).then(note => note.filter(n => n)
                 .populate('members.user', 'username fullName picture')
