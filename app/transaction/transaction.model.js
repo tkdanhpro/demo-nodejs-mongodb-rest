@@ -25,27 +25,10 @@ const transactions = mongoose.model('transactions', new mongoose.Schema({
         trim: true
     },
     description: String,
-    payments: [
+    users: [
         {
-            user: {
-                type: Schema.Types.ObjectId,
-                ref: 'users'
-            },
-            payment: {
-                type: Number,
-                required: true,
-                default: 0
-            },
-            remain: {
-                type: Number,
-                required: true,
-                default: 0
-            },
-            type: {
-                type: String,
-                enum: ['CASHBACK', 'DEBT']
-            }
-
+            type: Schema.Types.ObjectId,
+            ref: 'users'
         }
     ],
     payer: {

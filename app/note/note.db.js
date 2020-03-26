@@ -1,5 +1,6 @@
 const NoteModel = require('./note.model');
 const TransModel = require('./../transaction/transaction.model')
+const UserTransTrackingModel = require('./../user_trans_tracking/user_trans_tracking.model')
 const PermissionDeniedError = require('../core/error/PermissionDeniedError')
 const MembersNoteNotEmptyError = require('../core/error/MembersNoteNotEmptyError')
 const NoteNotFoundError = require('../core/error/NoteNotFoundError')
@@ -15,7 +16,6 @@ module.exports = {
             data.createdBy = user._id;
             data.admin = user._id;
             data.members = data.members.concat({ user });
-            data.transactions = [];
             const note = new NoteModel(data);
             await note.save()
                 .then(n => n.populate('members.user', 'username fullName picture')
@@ -35,7 +35,7 @@ module.exports = {
                 .populate({
                     path: 'transactions',
                     select: 'title type value payments',
-                    populate: {path: 'payments.user', select: 'username fullName picture -_id'}
+                    populate: { path: 'payments.user', select: 'username fullName picture -_id' }
                 })
                 .populate('members.user', 'username fullName picture -_id')
                 .populate('createdBy', 'username fullName picture -_id')
@@ -51,15 +51,15 @@ module.exports = {
     getUserNotes: async (req, res) => {
         try {
             const _id = req.user._id;
-            console.log('user ', _id)
-            const results = await NoteModel.find({ 'members.user': { '$eq': _id, '$exists': true } }
-                , { name: 1, description: 1, status: 1, totalCashIn: 1, totalCashOut: 1, remainAmount: 1, created_at: 1, updated_at: 1, 'members.user': 1 })
+            const results = await NoteModel.find( { 'members.user': { '$eq': _id, '$exists': true } }
+                , { name: 1, description: 1, status: 1, totalCashIn: 1, totalCashOut: 1, totalRemain: 1, created_at: 1, updated_at: 1, 'members.user': 1 })
                 .populate('members.user', 'username fullName picture  -_id')
-            // .populate('createdBy', 'username fullName picture')
-            // .populate('admin', 'username fullName picture')
-            // .populate('transactions', 'title type value')
+  
             const notes = results.filter(item => item.members.filter(m => m.user).length > 0)
-
+            // notes.forEach(note => {
+            //     const transTrackingList = await UserTransTrackingModel.find({ note, user: _id,})
+            //     .populate('trans', 'type value -_id')
+            // })
             res.status(201).send({ notes });
         } catch (err) {
             res.status(404).send(err);
