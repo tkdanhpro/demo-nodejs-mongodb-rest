@@ -35,7 +35,10 @@ const transactions = mongoose.model('transactions', new mongoose.Schema({
         type: Schema.Types.ObjectId,
         ref: 'users'
     },
-    remainAmount: Number,
+    remainAmount: {
+        type: Number,
+        default: 0
+    },
     status: {
         type: String,
         enum: ['CREATED', 'COMPLETED'],

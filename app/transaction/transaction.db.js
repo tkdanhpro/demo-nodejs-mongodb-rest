@@ -166,6 +166,9 @@ module.exports = {
     getByNote: async (req, res) => {
         try {
             const note = req.params.noteId;
+            console.log('note ', note)
+            const userTrackings = await UserTransTrackingModel.find({ note, user: req.user })
+
             var trans = await TransModel.find({ note })
                 .populate('users', 'username fullName picture')
                 .populate('payer', 'username fullName picture')
@@ -175,22 +178,12 @@ module.exports = {
                 throw new TransNotFoundError()
             }
 
-            trans.forEach(async tran => {
-                tran.remainAmount = 0;
-                const tran_id = tran;
-                await UserTransTrackingModel.findOne({ note, user: req.user, trans: tran_id },
-                    (err, data) => {
-                        var remainAmount = 0;
-                        if (data) {
-                            remainAmount = data.remain;
-                        }
-                        tran.remainAmount = remainAmount
-
-                    })
-                console.log('data ', tran)
-                return tran
+            trans.forEach((tran, index, array) => {
+                const item = userTrackings.filter(tracking => tracking.trans.equals(tran._id))
+                if (item) {
+                    array[index].remainAmount = item[0].remain
+                }
             })
-
 
             res.status(201).send({ trans })
         } catch (err) {
