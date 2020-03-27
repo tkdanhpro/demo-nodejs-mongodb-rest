@@ -13,7 +13,6 @@ module.exports = {
             }
 
             const data = req.body.data;
-
             data.createdBy = req.user._id;
             data.payer = req.user._id;
 
@@ -63,15 +62,6 @@ module.exports = {
 
             await UserTransTrackingModel.insertMany(userTransTrackingList);
 
-            // if (data.type == 'OUT') {
-            //     note.totalCashOut += data.value;
-            // } else {
-            //     note.totalCashIn += data.value;
-            // }
-
-            // note.transactions = note.transactions.concat(trans)
-            // await note.save();
-
             res.status(201).send({ trans });
 
         } catch (err) {
@@ -79,63 +69,68 @@ module.exports = {
         }
     },
 
-
     updateTrans: async (req, res) => {
         try {
-            const ts = await TransModel.findById(req.body.data._id);
+            const data = req.body.data;
+            data.createdBy = req.user._id;
+            data.payer = req.user._id;
+            const transId = data._id
+
+            const ts = await TransModel.findById(transId);
             if (!ts) {
                 throw new TransNotFoundError()
             }
-            const note = await NoteModel.findById(req.body.data.note);
+            const note = await NoteModel.findById(data.note);
             if (!note) {
                 throw new NoteNotFoundError()
             }
 
-            const data = req.body.data;
-            data.updatedBy = req.user._id;
 
-            data.payments.forEach(element => {
-                if (element.user == data.payer) {
-                    element.type = 'CASHBACK';
-                    element.remain = data.value - element.payment;
-                } else {
-                    element.type = 'DEBT';
-                    element.remain = - element.payment;
-                }
-                return element;
-            });
-
-            const isIncludesPayer = data.payments.filter(p => p.user == data.payer).length > 0;
-
-            if (!isIncludesPayer) {
-                const payerUser = {
+            // check if payments contains payer or not
+            const isIncludedPayer = data.payments.filter(p => p.user == data.payer).length > 0;
+            if (!isIncludedPayer) {
+                data.payments.push({
                     user: data.payer,
-                    payment: 0,
-                    remain: data.value,
-                    type: 'CASHBACK'
-                }
-                data.payments = data.payments.concat(payerUser)
+                    amount: 0
+                })
             }
 
-            // update note
-            // data.payments.forEach(element => {
-            //     note.members.map(m => {
-            //         if (m.user.equals(element.user)) {
-            //             m.totalPayment += element.payment;
-            //             m.totalRemain += element.remain;
-            //         }
-            //         return m;
-            //     });
-            // })
-            // await note.save();
 
-
-            const trans = await TransModel.findByIdAndUpdate({ _id: req.body.data._id }, data, { new: true })
+            // set data for transactions
+            const users = data.payments.map(payment => payment.user);
+            data.users = users;
+            const trans = await TransModel.findByIdAndUpdate({ _id: transId }, data, { new: true })
                 .then(t => {
-                    t.populate('payments.user', 'username fullName picture')
-                        .populate('payer', 'username fullName picture')
-                        .populate('createdBy', 'username fullName picture')
+                    t.populate('users', 'username fullName picture')
+                    .populate('payer', 'username fullName picture')
+                    .populate('createdBy', 'username fullName picture')
                 });
+            console.log('got here: ', trans)
+            // delete previous tracking list
+            // await UserTransTrackingModel.deleteMany({note: note._id, trans: transId})
+
+            // add user trans tracking
+            // var userTransTrackingList = [];
+
+            // data.payments.forEach(payment => {
+            //     var trackingData = {
+            //         user: payment.user,
+            //         note,
+            //         trans,
+            //         payment: payment.amount
+            //     }
+            //     if (payment.user == data.payer) {
+            //         trackingData.type = 'CASHBACK';
+            //         trackingData.remain = data.value - trackingData.payment;
+            //     } else {
+            //         trackingData.type = 'DEBT';
+            //         trackingData.remain = - trackingData.payment;
+            //     }
+            //     userTransTrackingList.push(new UserTransTrackingModel(trackingData))
+
+            // });
+
+            // await UserTransTrackingModel.insertMany(userTransTrackingList);
 
             res.status(201).send({ trans });
 
@@ -166,8 +161,6 @@ module.exports = {
     getByNote: async (req, res) => {
         try {
             const note = req.params.noteId;
-            console.log('note ', note)
-            const userTrackings = await UserTransTrackingModel.find({ note, user: req.user })
 
             var trans = await TransModel.find({ note })
                 .populate('users', 'username fullName picture')
@@ -177,15 +170,24 @@ module.exports = {
             if (!trans) {
                 throw new TransNotFoundError()
             }
-
+            var totalPayment = 0;
+            const userTrackings = await UserTransTrackingModel.find({ note, user: req.user })
             trans.forEach((tran, index, array) => {
+                totalPayment += tran.value;
                 const item = userTrackings.filter(tracking => tracking.trans.equals(tran._id))
                 if (item) {
                     array[index].remainAmount = item[0].remain
                 }
             })
 
-            res.status(201).send({ trans })
+            var userRemainAmount = 0;
+            var userPaymentAmount = 0;
+            userTrackings.forEach(tracking => {
+                userRemainAmount += tracking.remain;
+                userPaymentAmount += tracking.payment
+            })
+
+            res.status(201).send({ trans, userRemainAmount, userPaymentAmount, totalPayment })
         } catch (err) {
             res.status(404).send(err);
         }
