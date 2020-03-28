@@ -95,42 +95,39 @@ module.exports = {
                 })
             }
 
-
             // set data for transactions
             const users = data.payments.map(payment => payment.user);
             data.users = users;
             const trans = await TransModel.findByIdAndUpdate({ _id: transId }, data, { new: true })
-                .then(t => {
-                    t.populate('users', 'username fullName picture')
+                    .populate('users', 'username fullName picture')
                     .populate('payer', 'username fullName picture')
-                    .populate('createdBy', 'username fullName picture')
-                });
-            console.log('got here: ', trans)
+                    .populate('createdBy', 'username fullName picture');
+
             // delete previous tracking list
-            // await UserTransTrackingModel.deleteMany({note: note._id, trans: transId})
+            await UserTransTrackingModel.deleteMany({note: note._id, trans: transId})
 
             // add user trans tracking
-            // var userTransTrackingList = [];
+            var userTransTrackingList = [];
 
-            // data.payments.forEach(payment => {
-            //     var trackingData = {
-            //         user: payment.user,
-            //         note,
-            //         trans,
-            //         payment: payment.amount
-            //     }
-            //     if (payment.user == data.payer) {
-            //         trackingData.type = 'CASHBACK';
-            //         trackingData.remain = data.value - trackingData.payment;
-            //     } else {
-            //         trackingData.type = 'DEBT';
-            //         trackingData.remain = - trackingData.payment;
-            //     }
-            //     userTransTrackingList.push(new UserTransTrackingModel(trackingData))
+            data.payments.forEach(payment => {
+                var trackingData = {
+                    user: payment.user,
+                    note,
+                    trans,
+                    payment: payment.amount
+                }
+                if (payment.user == data.payer) {
+                    trackingData.type = 'CASHBACK';
+                    trackingData.remain = data.value - trackingData.payment;
+                } else {
+                    trackingData.type = 'DEBT';
+                    trackingData.remain = - trackingData.payment;
+                }
+                userTransTrackingList.push(new UserTransTrackingModel(trackingData))
 
-            // });
+            });
 
-            // await UserTransTrackingModel.insertMany(userTransTrackingList);
+            await UserTransTrackingModel.insertMany(userTransTrackingList);
 
             res.status(201).send({ trans });
 

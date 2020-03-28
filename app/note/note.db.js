@@ -6,6 +6,12 @@ const MembersNoteNotEmptyError = require('../core/error/MembersNoteNotEmptyError
 const NoteNotFoundError = require('../core/error/NoteNotFoundError')
 const NoteCompletedError = require('../core/error/NoteCompletedError')
 
+async function asyncForEach(array, callback) {
+    for (let index = 0; index < array.length; index++) {
+      await callback(array[index], index, array);
+    }
+  }
+
 module.exports = {
     addNote: async (req, res) => {
         try {
@@ -30,17 +36,19 @@ module.exports = {
     },
     getById: async (req, res) => {
         try {
+            const notes = await NoteModel.findById(req.params.id , 
+                { name: 1, description: 1, status: 1, totalCashIn: 1, totalCashOut: 1, totalRemain: 1, created_at: 1, updated_at: 1, 'members.user': 1 })
+            .populate('members.user', 'username fullName picture  -_id')
+                // .populate('members.user', 'username fullName picture -_id')
+                // .populate('createdBy', 'username fullName picture -_id')
+                // .populate('admin', 'username fullName picture -_id')
 
-            const notes = await NoteModel.findById(req.params.id)
-                .populate({
-                    path: 'transactions',
-                    select: 'title type value payments',
-                    populate: { path: 'payments.user', select: 'username fullName picture -_id' }
-                })
-                .populate('members.user', 'username fullName picture -_id')
-                .populate('createdBy', 'username fullName picture -_id')
-                .populate('admin', 'username fullName picture -_id')
-
+            // await asyncForEach(notes, async (note, index, array) => {
+            //     const transList = await TransModel.find({ note })
+            //     const totalCashOut = transList.map(t => t.value).reduce((a,b) => a + b, 0)
+            //     array[index].totalCashOut += totalCashOut
+            // })
+    
             res.status(201).send({ notes });
         } catch (err) {
             res.status(404).send(err);
@@ -51,15 +59,18 @@ module.exports = {
     getUserNotes: async (req, res) => {
         try {
             const _id = req.user._id;
-            const results = await NoteModel.find( { 'members.user': { '$eq': _id, '$exists': true } }
+            const notes = await NoteModel.find( { 'members.user': { '$eq': _id, '$exists': true } }
                 , { name: 1, description: 1, status: 1, totalCashIn: 1, totalCashOut: 1, totalRemain: 1, created_at: 1, updated_at: 1, 'members.user': 1 })
                 .populate('members.user', 'username fullName picture  -_id')
+                .then(results => results.filter(item => item.members.filter(m => m.user).length > 0))
   
-            const notes = results.filter(item => item.members.filter(m => m.user).length > 0)
-            // notes.forEach(note => {
-            //     const transTrackingList = await UserTransTrackingModel.find({ note, user: _id,})
-            //     .populate('trans', 'type value -_id')
-            // })
+            // var notes = results.filter(item => item.members.filter(m => m.user).length > 0)
+            await asyncForEach(notes, async (note, index, array) => {
+                const transList = await TransModel.find({ note })
+                const totalCashOut = transList.map(t => t.value).reduce((a,b) => a + b, 0)
+                array[index].totalCashOut += totalCashOut
+            })
+
             res.status(201).send({ notes });
         } catch (err) {
             res.status(404).send(err);
@@ -116,7 +127,7 @@ module.exports = {
                     .populate('admin', 'username fullName picture')
                     .execPopulate());;
 
-            res.status(201).send({ note });
+            res.status(201).send({ note: note._id, status: note.status });
         } catch (err) {
             res.status(404).send(err);
         }
