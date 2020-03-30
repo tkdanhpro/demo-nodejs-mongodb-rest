@@ -248,7 +248,7 @@ module.exports = {
         const id = req.user.id;
         const data = req.body.data;
 
-        if (data.email != req.user.email) {
+        if (data.email && data.email != req.user.email) {
             await verifyEmail(data.email)
         }
 
