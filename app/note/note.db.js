@@ -1,6 +1,5 @@
 const NoteModel = require('./note.model');
 const TransModel = require('./../transaction/transaction.model')
-const UserTransTrackingModel = require('./../user_trans_tracking/user_trans_tracking.model')
 const PermissionDeniedError = require('../core/error/PermissionDeniedError')
 const MembersNoteNotEmptyError = require('../core/error/MembersNoteNotEmptyError')
 const NoteNotFoundError = require('../core/error/NoteNotFoundError')
@@ -93,15 +92,8 @@ module.exports = {
                 return mem
             });
 
-            const note = await NoteModel.findOneAndUpdate({ _id, admin }, data, { new: true }, (err, result) => {
-                if (err) {
-                    console.log(err);
-                    res.send({ status: 500, message: "Error, db request failed" });
-                    return
-                }
-                return
-
-            }).then(note => note.filter(n => n)
+            const note = await NoteModel.findOneAndUpdate({ _id, admin }, data, { new: true })
+            .then(note => note.filter(n => n)
                 .populate('members.user', 'username fullName picture')
                 .populate('admin', 'username fullName picture')
                 .execPopulate());

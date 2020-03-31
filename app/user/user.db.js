@@ -3,7 +3,6 @@ const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken');
 const validator = require('validator');
 
-const ApplicationError = require('./../core/error/ApplicationError');
 const InvalidFullNameError = require('./../core/error/InvalidFullNameError');
 const WrongEmailFormatError = require('./../core/error/WrongEmailFormatError');
 const EmailAlreadyExistsError = require('./../core/error/EmailAlreadyExistsError');
@@ -82,12 +81,12 @@ const findByCredentials = async (username, passwordHash) => {
     const user = await UserModel.findOne({ username });
 
     if (!user) {
-        throw new ApplicationError('Invalid login credentials');
+        throw new AuthenticationFailedError()
     }
     const isPasswordMatch = await bcrypt.compare(passwordHash, user.passwordHash);
 
     if (!isPasswordMatch) {
-        throw new ApplicationError('Invalid login credentials')
+        throw new AuthenticationFailedError()
     }
     return user
 };
@@ -155,16 +154,13 @@ module.exports = {
     },
 
     getUsers: async (params, res) => {
-        return await UserModel.find(params, (err, result) => {
-            if (err || !result) {
-                console.log(err);
-                res.status(500).send("Database error!");
-                return
-            }
-
-            res.status(201).send({ status: "ok", data: result });
-
-        });
+        try {
+            const users =  await UserModel.find(params);
+            res.status(201).send({ data: users });
+        } catch (err) {
+            res.status(404).send({ status: 500, message: 'Ops! Something went wrong. Please try again!' });
+        }
+        
     },
 
     signOut: async (req, res) => {
@@ -175,7 +171,7 @@ module.exports = {
             await req.user.save()
             res.send({ status: 200, message: 'Sign out!' })
         } catch (err) {
-            res.status(400).send({ status: "error", value: err.toString() });
+            res.status(500).send({ status: 500, message: 'Ops! Something went wrong. Please try again!' });
         }
     },
 
@@ -189,7 +185,7 @@ module.exports = {
             const token = await generateAuthToken(user)
             res.send({ user, token })
         } catch (err) {
-            res.status(400).send(err);
+            res.status(404).send(err);
         }
     },
 
@@ -252,15 +248,8 @@ module.exports = {
             await verifyEmail(data.email)
         }
 
-        UserModel.findByIdAndUpdate(id, data, { new: true }, (err, result) => {
-            if (err) {
-                console.log(err);
-                res.send(JSON.stringify({ status: "error", value: "Error, db request failed" }));
-                return
-            }
-
-            res.status(201).send({ status: "ok", data: result });
-        });
+        const result = await UserModel.findByIdAndUpdate(id, data, { new: true });
+        res.status(201).send({ data: result });
     },
 
     changePassword: async (req, res) => {
@@ -280,15 +269,7 @@ module.exports = {
         user.tokens = [];
         const token = await generateAuthToken(user);
 
-        const updatedUser = await UserModel.findByIdAndUpdate(id, { user }, { new: true }, (err, result) => {
-            if (err) {
-                console.log(err);
-                res.send({ status: 500, message: "Error, db request failed" });
-                return
-            }
-
-            return result
-        });
+        const updatedUser = await UserModel.findByIdAndUpdate(id, { user }, { new: true });
 
         res.status(201).send({ user: updatedUser, token: token });
     },
