@@ -8,6 +8,9 @@ const auth = async (req, res, next) => {
     try {
         const token = req.header('Money-Xiaolin-Auth');
 
+        if (!token) {
+            throw new AuthenticationFailedError();
+        }
         const data = jwt.verify(token, JWT_KEY);
         
         const user = await UserModel.findOne({ _id: data.id, 'tokens.token': token });
