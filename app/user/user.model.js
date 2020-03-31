@@ -16,8 +16,7 @@ const users = mongoose.model('users', new mongoose.Schema({
     },
     birthday: {
         type: Date,
-        min: '1900-01-01',
-        max: '2020-01-01'
+        min: '1900-01-01'
     },
     gender: {
         type: String,
