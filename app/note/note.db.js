@@ -37,7 +37,7 @@ module.exports = {
         try {
             const notes = await NoteModel.findById(req.params.id , 
                 { name: 1, description: 1, status: 1, totalCashIn: 1, totalCashOut: 1, totalRemain: 1, created_at: 1, updated_at: 1, isLeft: 1, 'members.user': 1 })
-            .populate('members.user', 'username fullName picture  -_id')
+            .populate('members.user', 'username fullName picture')
                 // .populate('members.user', 'username fullName picture -_id')
                 // .populate('createdBy', 'username fullName picture -_id')
                 // .populate('admin', 'username fullName picture -_id')
@@ -60,7 +60,7 @@ module.exports = {
             const _id = req.user._id;
             const notes = await NoteModel.find( { 'members.user': { '$eq': _id, '$exists': true } }
                 , { name: 1, description: 1, status: 1, totalCashIn: 1, totalCashOut: 1, totalRemain: 1, created_at: 1, updated_at: 1, isLeft: 1, 'members.user': 1 })
-                .populate('members.user', 'username fullName picture  -_id')
+                .populate('members.user', 'username fullName picture')
                 .then(results => results.filter(item => item.members.filter(m => m.user).length > 0))
   
             // var notes = results.filter(item => item.members.filter(m => m.user).length > 0)
