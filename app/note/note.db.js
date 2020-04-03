@@ -1,5 +1,6 @@
 const NoteModel = require('./note.model');
 const TransModel = require('./../transaction/transaction.model')
+const UserTrackingModel = require('./../user_trans_tracking/user_trans_tracking.model')
 const PermissionDeniedError = require('../core/error/PermissionDeniedError')
 const MembersNoteNotEmptyError = require('../core/error/MembersNoteNotEmptyError')
 const NoteNotFoundError = require('../core/error/NoteNotFoundError')
@@ -68,6 +69,11 @@ module.exports = {
                 const transList = await TransModel.find({ note })
                 const totalCashOut = transList.map(t => t.value).reduce((a,b) => a + b, 0)
                 array[index].totalCashOut += totalCashOut
+
+                const trackingList = await UserTrackingModel.find( {note,user:req.user})
+                
+                const totalRemain = trackingList.map(t => t.remain).reduce((a,b) => a + b, 0)
+                array[index].totalRemain += totalRemain
             })
 
             res.status(201).send({ notes });
