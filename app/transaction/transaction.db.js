@@ -35,6 +35,7 @@ module.exports = {
                 .then(t => {
                         // t.filter({ title: 1, description: 1, status: 1, type: 1, payer: 1, createdBy: 1, created_at: 1, updated_at: 1 })
                         t.populate('payer', 'fullName picture')
+                        .populate('users', 'fullName picture')
                         .populate('createdBy', 'fullName picture')
                         .execPopulate()
                 });
