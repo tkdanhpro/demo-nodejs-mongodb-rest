@@ -41,7 +41,6 @@ module.exports = {
 
             // add user trans tracking
             var userTransTrackingList = [];
-
             data.payments.forEach(payment => {
                 var trackingData = {
                     user: payment.user,
@@ -52,6 +51,7 @@ module.exports = {
                 if (payment.user == data.payer) {
                     trackingData.type = 'CASHBACK';
                     trackingData.remain = data.value - trackingData.payment;
+                    trans.remainAmount = trackingData.remain
                 } else {
                     trackingData.type = 'DEBT';
                     trackingData.remain = - trackingData.payment;
@@ -63,7 +63,7 @@ module.exports = {
             await UserTransTrackingModel.insertMany(userTransTrackingList);
             const trackings = await UserTransTrackingModel.find({ trans })
                 .populate('user', 'fullName picture')
-            res.status(201).send({ trans, trackings });
+            res.status(201).send({ trans });
 
         } catch (err) {
             res.status(404).send(err);
