@@ -24,8 +24,8 @@ module.exports = {
             data.members = data.members.concat({ user });
             const note = new NoteModel(data);
             await note.save()
-                .then(n => n.populate('members.user', 'username fullName picture')
-                    .populate('admin', 'username fullName picture')
+                .then(n => n.populate('members.user', 'fullName picture')
+                    .populate('admin', 'fullName picture')
                     .execPopulate());
             res.status(201).send({ note });
 
@@ -38,7 +38,7 @@ module.exports = {
         try {
             const notes = await NoteModel.findById(req.params.id , 
                 { name: 1, description: 1, status: 1, totalCashIn: 1, totalCashOut: 1, totalRemain: 1, created_at: 1, updated_at: 1, 'members.user': 1 })
-            .populate('members.user', 'username fullName picture  -_id')
+            .populate('members.user', 'fullName picture')
                 // .populate('members.user', 'username fullName picture -_id')
                 // .populate('createdBy', 'username fullName picture -_id')
                 // .populate('admin', 'username fullName picture -_id')
@@ -61,7 +61,7 @@ module.exports = {
             const _id = req.user._id;
             const notes = await NoteModel.find( { 'members.user': { '$eq': _id, '$exists': true } }
                 , { name: 1, description: 1, status: 1, totalCashIn: 1, totalCashOut: 1, totalRemain: 1, created_at: 1, updated_at: 1, 'members.user': 1 })
-                .populate('members.user', 'username fullName picture  -_id')
+                .populate('members.user', 'fullName picture')
                 .then(results => results.filter(item => item.members.filter(m => m.user).length > 0))
   
             // var notes = results.filter(item => item.members.filter(m => m.user).length > 0)
@@ -102,8 +102,8 @@ module.exports = {
                 return
 
             }).then(note => note.filter(n => n)
-                .populate('members.user', 'username fullName picture')
-                .populate('admin', 'username fullName picture')
+                .populate('members.user', 'fullName picture')
+                .populate('admin', 'fullName picture')
                 .execPopulate());
 
             if (!note) throw new PermissionDeniedError();
@@ -123,8 +123,8 @@ module.exports = {
 
             note.status = req.body.status;
             await note.save()
-                .then(n => n.populate('members.user', 'username fullName picture')
-                    .populate('admin', 'username fullName picture')
+                .then(n => n.populate('members.user', 'fullName picture')
+                    .populate('admin', 'fullName picture')
                     .execPopulate());;
 
             res.status(201).send({ note: note._id, status: note.status });
@@ -163,8 +163,8 @@ module.exports = {
             })
             note.status = 'COMPLETED'
             await note.save()
-                .then(n => n.populate('members.user', 'username fullName picture')
-                    .populate('admin', 'username fullName picture')
+                .then(n => n.populate('members.user', 'fullName picture')
+                    .populate('admin', 'fullName picture')
                     .execPopulate());;
 
             res.status(201).send({ note });

@@ -31,10 +31,11 @@ module.exports = {
 
             const trans = new TransModel(data);
             await trans.save()
+                
                 .then(t => {
-                    t.populate('users', 'username fullName picture')
-                        .populate('payer', 'username fullName picture')
-                        .populate('createdBy', 'username fullName picture')
+                        // t.filter({ title: 1, description: 1, status: 1, type: 1, payer: 1, createdBy: 1, created_at: 1, updated_at: 1 })
+                        t.populate('payer', 'fullName picture')
+                        .populate('createdBy', 'fullName picture')
                         .execPopulate()
                 });
 
@@ -59,10 +60,10 @@ module.exports = {
 
             });
 
-
             await UserTransTrackingModel.insertMany(userTransTrackingList);
-
-            res.status(201).send({ trans });
+            const trackings = await UserTransTrackingModel.find({ trans })
+                .populate('user', 'fullName picture')
+            res.status(201).send({ trans, trackings });
 
         } catch (err) {
             res.status(404).send(err);
@@ -99,9 +100,9 @@ module.exports = {
             const users = data.payments.map(payment => payment.user);
             data.users = users;
             const trans = await TransModel.findByIdAndUpdate({ _id: transId }, data, { new: true })
-                    .populate('users', 'username fullName picture')
-                    .populate('payer', 'username fullName picture')
-                    .populate('createdBy', 'username fullName picture');
+                    .populate('users', 'fullName picture')
+                    .populate('payer', 'fullName picture')
+                    .populate('createdBy', 'fullName picture');
 
             // delete previous tracking list
             await UserTransTrackingModel.deleteMany({note: note._id, trans: transId})
@@ -141,13 +142,13 @@ module.exports = {
             const id = req.params.id;
             const trans = await TransModel.findById(id,
                 { title: 1, description: 1, status: 1, type: 1, payer: 1, createdBy: 1, created_at: 1, updated_at: 1 })
-                .populate('payer', 'username fullName picture')
-                .populate('createdBy', 'username fullName picture');
+                .populate('payer', 'fullName picture')
+                .populate('createdBy', 'fullName picture');
             if (!trans) {
                 throw new TransNotFoundError()
             }
             const trackings = await UserTransTrackingModel.find({ trans: id })
-                .populate('user', 'username fullName picture')
+                .populate('user', 'fullName picture')
 
             res.status(201).send({ trans, trackings })
         } catch (err) {
@@ -160,9 +161,9 @@ module.exports = {
             const note = req.params.noteId;
 
             var trans = await TransModel.find({ note })
-                .populate('users', 'username fullName picture')
-                .populate('payer', 'username fullName picture')
-                .populate('createdBy', 'username fullName picture');
+                .populate('users', 'fullName picture')
+                .populate('payer', 'fullName picture')
+                .populate('createdBy', 'fullName picture');
 
             if (!trans) {
                 throw new TransNotFoundError()
@@ -183,8 +184,9 @@ module.exports = {
                 userRemainAmount += tracking.remain;
                 userPaymentAmount += tracking.payment
             })
+            var userPaidAmount = userRemainAmount + userPaymentAmount;
 
-            res.status(201).send({ trans, userRemainAmount, userPaymentAmount, totalPayment })
+            res.status(201).send({ trans, userRemainAmount, userPaymentAmount, userPaidAmount, totalPayment })
         } catch (err) {
             res.status(404).send(err);
         }
