@@ -1,7 +1,7 @@
 const ErrorCode = require('./ErrorCode');
 
 class ApplicationError extends Error {
-    constructor(message, status) {
+    constructor(message, errorCode) {
         super();
 
         Error.captureStackTrace(this, this.constructor);
@@ -11,7 +11,7 @@ class ApplicationError extends Error {
         this.message = message ||
             'Ops! Something went wrong. Please try again!';
 
-        this.status = status || ErrorCode.APPLICATION_ERROR;
+        this.errorCode = errorCode || ErrorCode.APPLICATION_ERROR;
     }
 };
 

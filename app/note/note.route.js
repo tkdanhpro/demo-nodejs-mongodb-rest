@@ -2,7 +2,6 @@ const express = require("express");
 // const request = require('request');
 const noteDb = require('./note.db');
 const auth = require('../core/middleware/auth');
-const ErrorCode = require('./../core/error/ErrorCode');
 
 const noteRoute = express.Router();
 
