@@ -276,7 +276,8 @@ module.exports = {
 
     search: async (req, res) => {
         const keyword = req.params.keyword.toLowerCase();
-        const regKey = new RegExp('^'+ keyword + '$', "i");
+        const regKey = new RegExp(keyword, 'i');
+        
         const searchResults = await UserModel.find({
             $or: [
                 { 'username': regKey },
@@ -291,7 +292,7 @@ module.exports = {
                 'fullName': 1
             })
             .limit(10);
-
+            console.log(regKey)
         res.status(201).send({ searchResults });
     }
 
