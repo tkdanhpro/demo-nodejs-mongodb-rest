@@ -8,9 +8,9 @@ const NoteCompletedError = require('../core/error/NoteCompletedError')
 
 async function asyncForEach(array, callback) {
     for (let index = 0; index < array.length; index++) {
-      await callback(array[index], index, array);
+        await callback(array[index], index, array);
     }
-  }
+}
 
 module.exports = {
     addNote: async (req, res) => {
@@ -36,19 +36,19 @@ module.exports = {
     },
     getById: async (req, res) => {
         try {
-            const notes = await NoteModel.findById(req.params.id , 
+            const notes = await NoteModel.findById(req.params.id,
                 { name: 1, description: 1, status: 1, totalCashIn: 1, totalCashOut: 1, totalRemain: 1, created_at: 1, updated_at: 1, 'members.user': 1 })
-            .populate('members.user', 'fullName picture')
-                // .populate('members.user', 'username fullName picture -_id')
-                // .populate('createdBy', 'username fullName picture -_id')
-                // .populate('admin', 'username fullName picture -_id')
+                .populate('members.user', 'fullName picture')
+            // .populate('members.user', 'username fullName picture -_id')
+            // .populate('createdBy', 'username fullName picture -_id')
+            // .populate('admin', 'username fullName picture -_id')
 
             // await asyncForEach(notes, async (note, index, array) => {
             //     const transList = await TransModel.find({ note })
             //     const totalCashOut = transList.map(t => t.value).reduce((a,b) => a + b, 0)
             //     array[index].totalCashOut += totalCashOut
             // })
-    
+
             res.status(201).send({ notes });
         } catch (err) {
             res.status(404).send(err);
@@ -59,20 +59,20 @@ module.exports = {
     getUserNotes: async (req, res) => {
         try {
             const _id = req.user._id;
-            const notes = await NoteModel.find( { 'members.user': { '$eq': _id, '$exists': true } }
+            const notes = await NoteModel.find({ 'members.user': { '$eq': _id, '$exists': true } }
                 , { name: 1, description: 1, status: 1, totalCashIn: 1, totalCashOut: 1, totalRemain: 1, created_at: 1, updated_at: 1, 'members.user': 1 })
                 .populate('members.user', 'fullName picture')
                 .then(results => results.filter(item => item.members.filter(m => m.user).length > 0))
-  
+
             // var notes = results.filter(item => item.members.filter(m => m.user).length > 0)
             await asyncForEach(notes, async (note, index, array) => {
                 const transList = await TransModel.find({ note })
-                const totalCashOut = transList.map(t => t.value).reduce((a,b) => a + b, 0)
+                const totalCashOut = transList.map(t => t.value).reduce((a, b) => a + b, 0)
                 array[index].totalCashOut += totalCashOut
 
-                const trackingList = await UserTrackingModel.find( {note,user:req.user})
-                
-                const totalRemain = trackingList.map(t => t.remain).reduce((a,b) => a + b, 0)
+                const trackingList = await UserTrackingModel.find({ note, user: req.user })
+
+                const totalRemain = trackingList.map(t => t.remain).reduce((a, b) => a + b, 0)
                 array[index].totalRemain += totalRemain
             })
 
@@ -99,10 +99,10 @@ module.exports = {
             });
 
             const note = await NoteModel.findOneAndUpdate({ _id, admin }, data, { new: true })
-            .then(note => note.filter(n => n)
-                .populate('members.user', 'username fullName picture')
-                .populate('admin', 'username fullName picture')
-                .execPopulate());
+                .then(note => note.filter(n => n)
+                    .populate('members.user', 'username fullName picture')
+                    .populate('admin', 'username fullName picture')
+                    .execPopulate());
 
             if (!note) throw new PermissionDeniedError();
             res.status(201).send({ note });

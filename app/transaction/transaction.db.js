@@ -3,6 +3,7 @@ const NoteModel = require('./../note/note.model')
 const UserTransTrackingModel = require('../user_trans_tracking/user_trans_tracking.model')
 const NoteNotFoundError = require('./../core/error/NoteNotFoundError')
 const TransNotFoundError = require('./../core/error/TransNotFoundError')
+const asyncForEach = require('./../core/common/common')
 
 module.exports = {
     addTrans: async (req, res) => {
@@ -170,15 +171,19 @@ module.exports = {
                 throw new TransNotFoundError()
             }
             var totalPayment = 0;
+            
             const userTrackings = await UserTransTrackingModel.find({ note, user: req.user })
+            // await asyncForEach(trans, async (tran, index, array) => {
             trans.forEach((tran, index, array) => {
                 totalPayment += tran.value;
+                
                 const item = userTrackings.filter(tracking => tracking.trans.equals(tran._id))
-                if (item) {
-                    array[index].remainAmount = item[0].remain
+                if (item.length > 0) {
+                    array[index].remainAmount += item[0].remain
                 }
+                
             })
-
+            
             var userRemainAmount = 0;
             var userPaymentAmount = 0;
             userTrackings.forEach(tracking => {
