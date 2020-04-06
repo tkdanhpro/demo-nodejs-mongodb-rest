@@ -143,7 +143,7 @@ module.exports = {
         try {
             const id = req.params.id;
             const trans = await TransModel.findById(id,
-                { title: 1, description: 1, status: 1, type: 1, payer: 1, createdBy: 1, created_at: 1, updated_at: 1 })
+                { title: 1, description: 1, value: 1, status: 1, type: 1, payer: 1, createdBy: 1, created_at: 1, updated_at: 1 })
                 .populate('payer', 'fullName picture')
                 .populate('createdBy', 'fullName picture');
             if (!trans) {
