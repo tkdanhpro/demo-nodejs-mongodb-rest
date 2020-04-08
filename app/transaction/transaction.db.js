@@ -63,9 +63,29 @@ module.exports = {
             });
 
             await UserTransTrackingModel.insertMany(userTransTrackingList);
-            const trackings = await UserTransTrackingModel.find({ trans })
-                .populate('user', 'fullName picture')
-            res.status(201).send({ trans });
+
+            var totalPayment = 0;
+            
+            const userTrackings = await UserTransTrackingModel.find({ note, user: req.user })
+            // await asyncForEach(trans, async (tran, index, array) => {
+            trans.forEach((tran, index, array) => {
+                totalPayment += tran.value;
+                
+                const item = userTrackings.filter(tracking => tracking.trans.equals(tran._id))
+                if (item.length > 0) {
+                    array[index].remainAmount += item[0].remain
+                }
+                
+            })
+            
+            var userRemainAmount = 0;
+            var userPaymentAmount = 0;
+            userTrackings.forEach(tracking => {
+                userRemainAmount += tracking.remain;
+                userPaymentAmount += tracking.payment
+            })
+            var userPaidAmount = userRemainAmount + userPaymentAmount;
+            res.status(201).send({ trans, userRemainAmount, userPaymentAmount, userPaidAmount, totalPayment });
 
         } catch (err) {
             res.status(404).send(err);
@@ -87,7 +107,6 @@ module.exports = {
             if (!note) {
                 throw new NoteNotFoundError()
             }
-
 
             // check if payments contains payer or not
             const isIncludedPayer = data.payments.filter(p => p.user == data.payer).length > 0;
@@ -132,7 +151,21 @@ module.exports = {
 
             await UserTransTrackingModel.insertMany(userTransTrackingList);
 
-            res.status(201).send({ trans });
+            // res.status(201).send({ trans });
+            var totalPayment = 0;
+            
+            const userTrackings = await UserTransTrackingModel.find({ note, user: req.user })
+            // await asyncForEach(trans, async (tran, index, array) => {
+            trans.forEach(tran => totalPayment += tran.value)
+            console.log(trans)
+            var userRemainAmount = 0;
+            var userPaymentAmount = 0;
+            userTrackings.forEach(tracking => {
+                userRemainAmount += tracking.remain;
+                userPaymentAmount += tracking.payment
+            })
+            var userPaidAmount = userRemainAmount + userPaymentAmount;
+            res.status(201).send({ trans, userRemainAmount, userPaymentAmount, userPaidAmount, totalPayment });
 
         } catch (err) {
             res.status(404).send(err);
