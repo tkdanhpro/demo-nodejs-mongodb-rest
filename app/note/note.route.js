@@ -2,7 +2,6 @@ const express = require("express");
 // const request = require('request');
 const noteDb = require('./note.db');
 const auth = require('../core/middleware/auth');
-const ErrorCode = require('./../core/error/ErrorCode');
 
 const noteRoute = express.Router();
 
@@ -18,7 +17,7 @@ noteRoute.get('/id/:id', auth, async (req, res, next) => {
 
 noteRoute.get('/me', auth, async (req, res, next) => {
     try {
-        await noteDb.getNotes(req, res)
+        await noteDb.getUserNotes(req, res)
 
     } catch (err) {
         next();

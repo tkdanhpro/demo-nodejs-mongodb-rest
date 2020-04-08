@@ -1,9 +1,16 @@
 const NoteModel = require('./note.model');
 const TransModel = require('./../transaction/transaction.model')
+const UserTrackingModel = require('./../user_trans_tracking/user_trans_tracking.model')
 const PermissionDeniedError = require('../core/error/PermissionDeniedError')
 const MembersNoteNotEmptyError = require('../core/error/MembersNoteNotEmptyError')
 const NoteNotFoundError = require('../core/error/NoteNotFoundError')
 const NoteCompletedError = require('../core/error/NoteCompletedError')
+
+async function asyncForEach(array, callback) {
+    for (let index = 0; index < array.length; index++) {
+        await callback(array[index], index, array);
+    }
+}
 
 module.exports = {
     addNote: async (req, res) => {
@@ -15,11 +22,10 @@ module.exports = {
             data.createdBy = user._id;
             data.admin = user._id;
             data.members = data.members.concat({ user });
-            data.transactions = [];
             const note = new NoteModel(data);
             await note.save()
-                .then(n => n.populate('members.user', 'username fullName picture')
-                    .populate('admin', 'username fullName picture')
+                .then(n => n.populate('members.user', 'fullName picture')
+                    .populate('admin', 'fullName picture')
                     .execPopulate());
             res.status(201).send({ note });
 
@@ -30,16 +36,18 @@ module.exports = {
     },
     getById: async (req, res) => {
         try {
+            const notes = await NoteModel.findById(req.params.id,
+                { name: 1, description: 1, status: 1, totalCashIn: 1, totalCashOut: 1, totalRemain: 1, created_at: 1, updated_at: 1, 'members.user': 1 })
+                .populate('members.user', 'fullName picture')
+            // .populate('members.user', 'username fullName picture -_id')
+            // .populate('createdBy', 'username fullName picture -_id')
+            // .populate('admin', 'username fullName picture -_id')
 
-            const notes = await NoteModel.findById(req.params.id)
-                .populate({
-                    path: 'transactions',
-                    select: 'title type value',
-                    // populate: {path: 'payments', select: 'fullName -_id'}
-                })
-                .populate('members.user', 'username fullName picture')
-                .populate('createdBy', 'username fullName picture')
-                .populate('admin', 'username fullName picture')
+            // await asyncForEach(notes, async (note, index, array) => {
+            //     const transList = await TransModel.find({ note })
+            //     const totalCashOut = transList.map(t => t.value).reduce((a,b) => a + b, 0)
+            //     array[index].totalCashOut += totalCashOut
+            // })
 
             res.status(201).send({ notes });
         } catch (err) {
@@ -48,16 +56,25 @@ module.exports = {
 
     },
 
-    getNotes: async (req, res) => {
+    getUserNotes: async (req, res) => {
         try {
             const _id = req.user._id;
-            console.log('user ', _id)
-            const results = await NoteModel.find({ 'members.user': { '$eq': _id, '$exists': true } })
-                .populate('members.user', 'username fullName picture')
-                .populate('createdBy', 'username fullName picture')
-                .populate('admin', 'username fullName picture')
-                .populate('transactions', 'title type value')
-            const notes = results.filter(item => item.members.filter(m => m.user).length > 0)
+            const notes = await NoteModel.find({ 'members.user': { '$eq': _id, '$exists': true } }
+                , { name: 1, description: 1, status: 1, totalCashIn: 1, totalCashOut: 1, totalRemain: 1, created_at: 1, updated_at: 1, 'members.user': 1 })
+                .populate('members.user', 'fullName picture')
+                .then(results => results.filter(item => item.members.filter(m => m.user).length > 0))
+
+            // var notes = results.filter(item => item.members.filter(m => m.user).length > 0)
+            await asyncForEach(notes, async (note, index, array) => {
+                const transList = await TransModel.find({ note })
+                const totalCashOut = transList.map(t => t.value).reduce((a, b) => a + b, 0)
+                array[index].totalCashOut += totalCashOut
+
+                const trackingList = await UserTrackingModel.find({ note, user: req.user })
+
+                const totalRemain = trackingList.map(t => t.remain).reduce((a, b) => a + b, 0)
+                array[index].totalRemain += totalRemain
+            })
 
             res.status(201).send({ notes });
         } catch (err) {
@@ -76,23 +93,16 @@ module.exports = {
                 throw new NoteCompletedError()
             }
             data.members.forEach(mem => {
-                if (mem.isLeft && mem.totalPayment == 0 && mem.totalRemain == 0)  
+                if (mem.isLeft && mem.totalPayment == 0 && mem.totalRemain == 0)
                     mem.deleted = true;
-                    return mem
+                return mem
             });
-            
-            const note = await NoteModel.findOneAndUpdate({ _id, admin }, data, { new: true }, (err, result) => {
-                if (err) {
-                    console.log(err);
-                    res.send({ status: 500, message: "Error, db request failed" });
-                    return
-                }
-                return 
 
-            }).then(note => note.filter(n => n)
-                .populate('members.user', 'username fullName picture')
-                .populate('admin', 'username fullName picture')
-                .execPopulate());
+            const note = await NoteModel.findOneAndUpdate({ _id, admin }, data, { new: true })
+                .then(note => note.filter(n => n)
+                    .populate('members.user', 'username fullName picture')
+                    .populate('admin', 'username fullName picture')
+                    .execPopulate());
 
             if (!note) throw new PermissionDeniedError();
             res.status(201).send({ note });
@@ -111,11 +121,11 @@ module.exports = {
 
             note.status = req.body.status;
             await note.save()
-                .then(n => n.populate('members.user', 'username fullName picture')
-                    .populate('admin', 'username fullName picture')
+                .then(n => n.populate('members.user', 'fullName picture')
+                    .populate('admin', 'fullName picture')
                     .execPopulate());;
 
-            res.status(201).send({ note });
+            res.status(201).send({ note: note._id, status: note.status });
         } catch (err) {
             res.status(404).send(err);
         }
@@ -151,8 +161,8 @@ module.exports = {
             })
             note.status = 'COMPLETED'
             await note.save()
-                .then(n => n.populate('members.user', 'username fullName picture')
-                    .populate('admin', 'username fullName picture')
+                .then(n => n.populate('members.user', 'fullName picture')
+                    .populate('admin', 'fullName picture')
                     .execPopulate());;
 
             res.status(201).send({ note });

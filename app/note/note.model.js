@@ -16,12 +16,7 @@ const notes = mongoose.model('notes', new mongoose.Schema({
         trim: true
     },
     description: String,
-    transactions: [
-        {
-            type: Schema.Types.ObjectId,
-            ref: 'transactions'
-        }
-    ],
+
     members: [
         {
             user: {
@@ -59,7 +54,7 @@ const notes = mongoose.model('notes', new mongoose.Schema({
         type: Number,
         default: 0
     },
-    remainAmount: {
+    totalRemain: {
         type: Number,
         default: 0
     }

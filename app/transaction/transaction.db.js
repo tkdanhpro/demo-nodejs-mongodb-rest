@@ -1,8 +1,9 @@
-const TransModel = require('./transaction.model');
-const NoteModel = require('./../note/note.model');
+const TransModel = require('./transaction.model')
+const NoteModel = require('./../note/note.model')
+const UserTransTrackingModel = require('../user_trans_tracking/user_trans_tracking.model')
 const NoteNotFoundError = require('./../core/error/NoteNotFoundError')
 const TransNotFoundError = require('./../core/error/TransNotFoundError')
-const TransCompletedError = require('./../core/error/TransCompletedError')
+const asyncForEach = require('./../core/common/common')
 
 module.exports = {
     addTrans: async (req, res) => {
@@ -13,109 +14,123 @@ module.exports = {
             }
 
             const data = req.body.data;
-
             data.createdBy = req.user._id;
+            data.payer = req.user._id;
 
-            data.payments.forEach((element) => {
-                if (element.user == data.payer) {
-                    element.type = 'CASHBACK';
-                    element.remain = data.value - element.payment;
-                } else {
-                    element.type = 'DEBT';
-                    element.remain = - element.payment;
-                }
-
-            });
-
-            const isIncludesPayer = data.payments.filter(p => p.user == data.payer).length > 0;
-
-            if (!isIncludesPayer) {
-                const payerUser = {
+            // check if payments contains payer or not
+            const isIncludedPayer = data.payments.filter(p => p.user == data.payer).length > 0;
+            if (!isIncludedPayer) {
+                data.payments.push({
                     user: data.payer,
-                    payment: 0,
-                    remain: data.value,
-                    type: 'CASHBACK'
-                }
-                data.payments = data.payments.concat(payerUser)
-                
+                    amount: 0
+                })
             }
 
-            // update note's data members
-            data.payments.forEach(element => {
-                note.members.map(m => {
-                    if (m.user.equals(element.user)) {
-                        m.totalPayment += element.payment;
-                        m.totalRemain += element.remain;       
-                    }
-                    return m;
-                });
-            })
+            // set data for transactions
+            const users = data.payments.map(payment => payment.user);
+            data.users = users;
 
             const trans = new TransModel(data);
             await trans.save()
-                        .then(t => {
-                            t.populate('payments.user', 'username fullName picture')
-                            .populate('payer', 'username fullName picture')
-                            .populate('createdBy', 'username fullName picture')
-                            .execPopulate()
-                        });
+                
+                .then(t => {
+                        // t.filter({ title: 1, description: 1, status: 1, type: 1, payer: 1, createdBy: 1, created_at: 1, updated_at: 1 })
+                        t.populate('payer', 'fullName picture')
+                        .populate('users', 'fullName picture')
+                        .populate('createdBy', 'fullName picture')
+                        .execPopulate()
+                });
 
-            // update note
-            if (data.type == 'OUT') {
-                note.totalCashOut += data.value;
-            } else {
-                note.totalCashIn += data.value;
-            }
-            
-            note.transactions = note.transactions.concat(trans)
-            await note.save();
+            // add user trans tracking
+            var userTransTrackingList = [];
+            data.payments.forEach(payment => {
+                var trackingData = {
+                    user: payment.user,
+                    note,
+                    trans,
+                    payment: payment.amount
+                }
+                if (payment.user == data.payer) {
+                    trackingData.type = 'CASHBACK';
+                    trackingData.remain = data.value - trackingData.payment;
+                    trans.remainAmount = trackingData.remain
+                } else {
+                    trackingData.type = 'DEBT';
+                    trackingData.remain = - trackingData.payment;
+                }
+                userTransTrackingList.push(new UserTransTrackingModel(trackingData))
+
+            });
+
+            await UserTransTrackingModel.insertMany(userTransTrackingList);
+            const trackings = await UserTransTrackingModel.find({ trans })
+                .populate('user', 'fullName picture')
             res.status(201).send({ trans });
 
         } catch (err) {
             res.status(404).send(err);
         }
     },
-
 
     updateTrans: async (req, res) => {
         try {
-            const ts = await TransModel.findById(req.body.data._id);
+            const data = req.body.data;
+            data.createdBy = req.user._id;
+            data.payer = req.user._id;
+            const transId = data._id
+
+            const ts = await TransModel.findById(transId);
             if (!ts) {
                 throw new TransNotFoundError()
             }
-
-            const data = req.body.data;
-            data.updatedBy = req.user._id;
-
-            data.payments.forEach(element => {
-                if (element.user == data.payer) {
-                    element.type = 'CASHBACK';
-                    element.remain = data.value - element.payment;
-                } else {
-                    element.type = 'DEBT';
-                    element.remain = - element.payment;
-                }
-                return element;
-            });
-
-            const isIncludesPayer = data.payments.filter(p => p.user == data.payer).length > 0;
-
-            if (!isIncludesPayer) {
-                const payerUser = {
-                    user: data.payer,
-                    payment: 0,
-                    remain: data.value,
-                    type: 'CASHBACK'
-                }
-                data.payments = data.payments.concat(payerUser)
+            const note = await NoteModel.findById(data.note);
+            if (!note) {
+                throw new NoteNotFoundError()
             }
 
-            const trans = await TransModel.findByIdAndUpdate({ _id: req.body.data._id }, data, { new: true })
-                .then( t => {
-                    t.populate('payments.user', 'username fullName picture')
-                    .populate('payer', 'username fullName picture')
-                    .populate('createdBy', 'username fullName picture')
-                });
+
+            // check if payments contains payer or not
+            const isIncludedPayer = data.payments.filter(p => p.user == data.payer).length > 0;
+            if (!isIncludedPayer) {
+                data.payments.push({
+                    user: data.payer,
+                    amount: 0
+                })
+            }
+
+            // set data for transactions
+            const users = data.payments.map(payment => payment.user);
+            data.users = users;
+            const trans = await TransModel.findByIdAndUpdate({ _id: transId }, data, { new: true })
+                    .populate('users', 'fullName picture')
+                    .populate('payer', 'fullName picture')
+                    .populate('createdBy', 'fullName picture');
+
+            // delete previous tracking list
+            await UserTransTrackingModel.deleteMany({note: note._id, trans: transId})
+
+            // add user trans tracking
+            var userTransTrackingList = [];
+
+            data.payments.forEach(payment => {
+                var trackingData = {
+                    user: payment.user,
+                    note,
+                    trans,
+                    payment: payment.amount
+                }
+                if (payment.user == data.payer) {
+                    trackingData.type = 'CASHBACK';
+                    trackingData.remain = data.value - trackingData.payment;
+                } else {
+                    trackingData.type = 'DEBT';
+                    trackingData.remain = - trackingData.payment;
+                }
+                userTransTrackingList.push(new UserTransTrackingModel(trackingData))
+
+            });
+
+            await UserTransTrackingModel.insertMany(userTransTrackingList);
 
             res.status(201).send({ trans });
 
@@ -123,18 +138,21 @@ module.exports = {
             res.status(404).send(err);
         }
     },
-    
+
     getById: async (req, res) => {
         try {
             const id = req.params.id;
-            const trans = await TransModel.findById(id)
-                .populate('payments.user', 'username fullName picture')
-                .populate('payer', 'username fullName picture')
-                .populate('createdBy', 'username fullName picture');
+            const trans = await TransModel.findById(id,
+                { title: 1, description: 1, value: 1, status: 1, type: 1, payer: 1, createdBy: 1, created_at: 1, updated_at: 1 })
+                .populate('payer', 'fullName picture')
+                .populate('createdBy', 'fullName picture');
             if (!trans) {
                 throw new TransNotFoundError()
             }
-            res.status(201).send({trans})
+            const trackings = await UserTransTrackingModel.find({ trans: id })
+                .populate('user', 'fullName picture')
+
+            res.status(201).send({ trans, trackings })
         } catch (err) {
             res.status(404).send(err);
         }
@@ -142,17 +160,39 @@ module.exports = {
 
     getByNote: async (req, res) => {
         try {
-            const noteId = req.params.noteId;
-            
-            const trans = await TransModel.find({note: noteId})
-                .populate('payments.user', 'username fullName picture')
-                .populate('payer', 'username fullName picture')
-                .populate('createdBy', 'username fullName picture');
-            
+            const note = req.params.noteId;
+
+            var trans = await TransModel.find({ note })
+                .populate('users', 'fullName picture')
+                .populate('payer', 'fullName picture')
+                .populate('createdBy', 'fullName picture');
+
             if (!trans) {
                 throw new TransNotFoundError()
             }
-            res.status(201).send({trans})
+            var totalPayment = 0;
+            
+            const userTrackings = await UserTransTrackingModel.find({ note, user: req.user })
+            // await asyncForEach(trans, async (tran, index, array) => {
+            trans.forEach((tran, index, array) => {
+                totalPayment += tran.value;
+                
+                const item = userTrackings.filter(tracking => tracking.trans.equals(tran._id))
+                if (item.length > 0) {
+                    array[index].remainAmount += item[0].remain
+                }
+                
+            })
+            
+            var userRemainAmount = 0;
+            var userPaymentAmount = 0;
+            userTrackings.forEach(tracking => {
+                userRemainAmount += tracking.remain;
+                userPaymentAmount += tracking.payment
+            })
+            var userPaidAmount = userRemainAmount + userPaymentAmount;
+
+            res.status(201).send({ trans, userRemainAmount, userPaymentAmount, userPaidAmount, totalPayment })
         } catch (err) {
             res.status(404).send(err);
         }
