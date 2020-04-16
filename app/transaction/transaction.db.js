@@ -1,6 +1,7 @@
 const TransModel = require('./transaction.model')
 const NoteModel = require('./../note/note.model')
 const UserTransTrackingModel = require('../user_trans_tracking/user_trans_tracking.model')
+const UserNoteDetailModel = require('../user_note_detail/user_note_detail.model')
 const NoteNotFoundError = require('./../core/error/NoteNotFoundError')
 const TransNotFoundError = require('./../core/error/TransNotFoundError')
 const asyncForEach = require('./../core/common/common')
@@ -8,14 +9,20 @@ const asyncForEach = require('./../core/common/common')
 module.exports = {
     addTrans: async (req, res) => {
         try {
-            const note = await NoteModel.findById(req.body.data.note);
+            var note = await NoteModel.findById(req.body.data.note);
             if (!note) {
                 throw new NoteNotFoundError()
             }
+            
 
             const data = req.body.data;
             data.createdBy = req.user._id;
             data.payer = req.user._id;
+
+            // update note
+            if (data.type == 'OUT') note.totalCashOut += data.value;
+            if (data.type == 'IN') note.totalCashIn += data.value;
+            note = await note.save();
 
             // check if payments contains payer or not
             const isIncludedPayer = data.payments.filter(p => p.user == data.payer).length > 0;
@@ -32,7 +39,6 @@ module.exports = {
 
             const trans = new TransModel(data);
             await trans.save()
-                
                 .then(t => {
                         // t.filter({ title: 1, description: 1, status: 1, type: 1, payer: 1, createdBy: 1, created_at: 1, updated_at: 1 })
                         t.populate('payer', 'fullName picture')
@@ -42,8 +48,13 @@ module.exports = {
                 });
 
             // add user trans tracking
+            var userPayment = 0;
+            var payerNoteDetail = {};
             var userTransTrackingList = [];
-            data.payments.forEach(payment => {
+            await asyncForEach(data.payments, async (payment, index, array) => {
+
+            // })
+            // data.payments.forEach(payment => {
                 var trackingData = {
                     user: payment.user,
                     note,
@@ -51,6 +62,7 @@ module.exports = {
                     payment: payment.amount
                 }
                 if (payment.user == data.payer) {
+                    userPayment += trackingData.payment;
                     trackingData.type = 'CASHBACK';
                     trackingData.remain = data.value - trackingData.payment;
                     trans.remainAmount = trackingData.remain
@@ -59,32 +71,31 @@ module.exports = {
                     trackingData.remain = - trackingData.payment;
                 }
                 userTransTrackingList.push(new UserTransTrackingModel(trackingData))
-
+                // update user's note detail
+                console.log("payment.user ", payment.user)
+                var userNoteDetail = await UserNoteDetailModel.findOne({note, user: payment.user});
+                if (!userNoteDetail) throw new NoteNotFoundError("User's note not found!")
+                userNoteDetail.userRemainAmount += trackingData.remain;
+                userNoteDetail.userPaymentAmount += trackingData.payment;
+                userNoteDetail = await userNoteDetail.save(); 
+                if (payment.user == data.payer) payerNoteDetail = userNoteDetail
+        
             });
+            console.log("payerNoteDetail ", payerNoteDetail)
 
             await UserTransTrackingModel.insertMany(userTransTrackingList);
+            var totalPayment = note.totalCashOut + trans.value;
+            
+            // var userNoteDetail = await UserNoteDetailModel.findOne({note, user: req.user});
+            // if (!userNoteDetail) throw new NoteNotFoundError("User's note not found!")
+            // userNoteDetail.userRemainAmount += (trans.value - userPayment);
+            // userNoteDetail.userPaymentAmount += userPayment;
+            // userNoteDetail = await userNoteDetail.save();            
 
-            var totalPayment = 0;
-            
-            const userTrackings = await UserTransTrackingModel.find({ note, user: req.user })
-            // await asyncForEach(trans, async (tran, index, array) => {
-            trans.forEach((tran, index, array) => {
-                totalPayment += tran.value;
-                
-                const item = userTrackings.filter(tracking => tracking.trans.equals(tran._id))
-                if (item.length > 0) {
-                    array[index].remainAmount += item[0].remain
-                }
-                
-            })
-            
-            var userRemainAmount = 0;
-            var userPaymentAmount = 0;
-            userTrackings.forEach(tracking => {
-                userRemainAmount += tracking.remain;
-                userPaymentAmount += tracking.payment
-            })
+            const userRemainAmount = payerNoteDetail.userRemainAmount;
+            const userPaymentAmount = payerNoteDetail.userPaymentAmount;
             var userPaidAmount = userRemainAmount + userPaymentAmount;
+
             res.status(201).send({ trans, userRemainAmount, userPaymentAmount, userPaidAmount, totalPayment });
 
         } catch (err) {
