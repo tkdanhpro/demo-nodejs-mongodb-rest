@@ -126,9 +126,28 @@ module.exports = {
             await note.save()
                 .then(n => n.populate('members.user', 'fullName picture')
                     .populate('admin', 'fullName picture')
-                    .execPopulate());;
+                    .execPopulate());
 
             res.status(201).send({ note: note._id, status: note.status });
+        } catch (err) {
+            res.status(404).send(err);
+        }
+    },
+
+    shareMoney: async (req, res) => {
+        try {
+            const noteId = req.body.id;
+            const note = await NoteModel.findById(noteId);
+            if (!note) {
+                throw new NoteNotFoundError();
+            }
+            note.status = 'COMPLETED';
+            await note.save();
+
+            const noteDetails = await UserNoteDetailModel.find({ note })
+                .then(detail => detail.populate('user', 'fullName picture'));
+
+            res.status(201).send({ note });
         } catch (err) {
             res.status(404).send(err);
         }
