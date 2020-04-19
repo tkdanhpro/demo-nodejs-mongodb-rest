@@ -68,4 +68,16 @@ module.exports ={
     // Sổ gạo này đã hoàn thành!
     // Note has completed already!
     NOTE_COMPLETED_FOUND: 705,
+
+    // Email không tồn tại!
+    // Email not found!
+    EMAIL_NOT_FOUND: 706,
+
+    // Mã xác nhận không đúng!
+    // Invalid verify code!
+    INVALID_VERIFY_CODE: 707,
+
+    // Không tìm thấy user
+    // User not found!
+    USER_NOT_FOUND: 708
 }

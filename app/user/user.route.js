@@ -6,6 +6,14 @@ const ErrorCode = require('./../core/error/ErrorCode');
 
 const userRoute = express.Router();
 
+userRoute.post('/forgotPassword', async (req, res) => {
+  try {
+    await userDb.forgotPassword(req, res);
+  } catch (error) {
+    res.status(500).send(error.message)
+  }
+});
+
 userRoute.get('/me', auth, async (req, res, next) => {
   try {
     res.send(req.user)
