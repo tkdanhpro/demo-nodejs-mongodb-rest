@@ -52,7 +52,6 @@ module.exports = {
             var payerNoteDetail = {};
             var userTransTrackingList = [];
             await asyncForEach(data.payments, async (payment, index, array) => {
-
             // })
             // data.payments.forEach(payment => {
                 var trackingData = {
@@ -71,12 +70,16 @@ module.exports = {
                     trackingData.remain = - trackingData.payment;
                 }
                 userTransTrackingList.push(new UserTransTrackingModel(trackingData))
+
                 // update user's note detail
-                console.log("payment.user ", payment.user)
                 var userNoteDetail = await UserNoteDetailModel.findOne({note, user: payment.user});
-                if (!userNoteDetail) throw new NoteNotFoundError("User's note not found!")
+                if (!userNoteDetail) {
+                    throw new NoteNotFoundError("User's note not found!")
+                }
+                
                 userNoteDetail.userRemainAmount += trackingData.remain;
                 userNoteDetail.userPaymentAmount += trackingData.payment;
+                userNoteDetail.userPaidAmount = userNoteDetail.userRemainAmount + userNoteDetail.userPaymentAmount;
                 userNoteDetail = await userNoteDetail.save(); 
                 if (payment.user == data.payer) payerNoteDetail = userNoteDetail
         
@@ -94,7 +97,7 @@ module.exports = {
 
             const userRemainAmount = payerNoteDetail.userRemainAmount;
             const userPaymentAmount = payerNoteDetail.userPaymentAmount;
-            var userPaidAmount = userRemainAmount + userPaymentAmount;
+            const userPaidAmount = payerNoteDetail.userPaidAmount;
 
             res.status(201).send({ trans, userRemainAmount, userPaymentAmount, userPaidAmount, totalPayment });
 
