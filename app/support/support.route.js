@@ -1,25 +1,24 @@
 const express = require("express");
-const emailService = require('../../services/email');
 
 const supportRouter = express.Router();
 
-supportRouter.get('/add',  async (req, res, next) => {
-
-    // insert to database here
-    // to do
-
-    // get list send mail
-    const listMail = 'mailtest@yopmail.com,mailtest2@yopmail.com';
-
-    const mailOptions = {
-        from: 'admin@xiaolin.com',
-        to: listMail,
-        subject: 'Subject of your email',
-        html: '<p>Your html here</p>'
+supportRouter.post('/add',  async (req, res, next) => {
+    const email= req.body.data.email;
+    const message = req.body.data.message;
+    const sgMail = require('@sendgrid/mail');
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);           
+    
+    const msg = {
+        from: 'moneyxiaolin@gmail.com',
+        to: 'moneyxiaolin@gmail.com',
+        subject: '[MoneyXiaolin] Customer Supports ',
+        text: 'Customer Supports',
+        html: '<p>Customer email: '+ email +'</p></br><p>Customer Supports: '+ message + ' </p>'
     };
-
-    emailService.sendMail(mailOptions);
-    res.send("Success");
+    await sgMail.send(msg).then((sent) => {
+        console.log('sent ', sent)
+    });
+    res.status(201).send({ success : true });
 });
 
 module.exports = supportRouter;
