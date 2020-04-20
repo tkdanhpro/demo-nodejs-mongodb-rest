@@ -14,6 +14,22 @@ userRoute.post('/forgotPassword', async (req, res) => {
   }
 });
 
+userRoute.post('/verifyForgotPasswordCode', async (req, res) => {
+  try {
+    await userDb.verifyForgotPasswordCode(req, res);
+  } catch (error) {
+    res.status(500).send(error.message)
+  }
+});
+
+userRoute.post('/resetPassword', async (req, res) => {
+  try {
+    await userDb.resetPassword(req, res);
+  } catch (error) {
+    res.status(500).send(error.message)
+  }
+});
+
 userRoute.get('/me', auth, async (req, res, next) => {
   try {
     res.send(req.user)

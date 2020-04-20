@@ -15,9 +15,8 @@ const UsernameLengthRequireError = require('./../core/error/UsernameLengthRequir
 const EmailNotFoundError = require('./../core/error/EmailNotFoundError');
 const InvalidVerifyCode = require('./../core/error/InvalidVerifyCode');
 const UserNotFoundError = require('./../core/error/UserNotFoundError');
-const Email = require('./../core/error/Us');
-
 const JWT_KEY = '@Money!Xi@oLin$@Tranvan2@@';
+require('dotenv').config();
 
 const usernameRegex = /^[a-zA-Z0-9]+$/
 const passwordRegex = /^[a-zA-Z0-9]*\S{6,}$/
@@ -182,13 +181,28 @@ module.exports = {
     forgotPassword: async (req, res) => {
         try {
             const email = req.body.data.email;
-            const user = await UserModel.find({email});
+            const user = await UserModel.findOne({email});
             if (!user) {
                 throw new EmailNotFoundError();
             }
             const code = Math.floor(100000 + Math.random() * 900000);
-            const data = new ForgotPasswordModel({ user, code});
-            await data.save()
+            const dataModel = new ForgotPasswordModel({ user: user._id, code})
+
+            const sgMail = require('@sendgrid/mail');
+            console.log("process.env ", process.env.SENDGRID_API_KEY)
+            sgMail.setApiKey(process.env.SENDGRID_API_KEY);           
+            
+            const msg = {
+                from: 'moneyxiaolin@gmail.com',
+                to: email,
+                subject: '[MoneyXiaolin] Verify Code',
+                text: 'MoneyXiaolin verify Code',
+                html: '<p>Your reset password code is : '+ code + ' </p>'
+            };
+            await sgMail.send(msg).then((sent) => {
+                console.log('sent ', sent)
+            });
+            await dataModel.save()
 
             res.send({ code })
         } catch (err) {
@@ -199,11 +213,12 @@ module.exports = {
     verifyForgotPasswordCode: async (req, res) => {
         try {
             const code = req.body.data.code;
-            const codeData = await ForgotPasswordModel.find({code, verified: false});
+            const codeData = await ForgotPasswordModel.findOne({code, verified: false});
             if (!codeData) {
                 throw new InvalidVerifyCode();
             }
             codeData.verified = true;
+            console.log(codeData)
             codeData.save()
             
             res.send({ verified : true })
@@ -214,11 +229,11 @@ module.exports = {
 
     resetPassword: async (req, res) => {
         const code = req.body.data.code;
-        const codeData = await ForgotPasswordModel.find({code, verified: true})
+        const codeData = await ForgotPasswordModel.findOne({code, verified: true})
         if (!codeData) {
             throw new InvalidVerifyCode();
         }
-        var user = await UserModel.findById(codeData.user._id)
+        var user = await UserModel.findById(codeData.user)
         if (!user) {
             throw new UserNotFoundError();
         }
@@ -229,7 +244,7 @@ module.exports = {
         user.tokens = [];
         const token = await generateAuthToken(user);
 
-        const updatedUser = await UserModel.findByIdAndUpdate(id, { user }, { new: true });
+        const updatedUser = await UserModel.findByIdAndUpdate(user._id, { user }, { new: true });
 
         res.status(201).send({ user: updatedUser, token: token });
     },
