@@ -1,7 +1,6 @@
-const NoteModel = require('./note.model');
-const TransModel = require('./../transaction/transaction.model')
-const UserNoteDetailModel = require('./../user_note_detail/user_note_detail.model')
-const UserTrackingModel = require('./../user_trans_tracking/user_trans_tracking.model')
+const NoteModel = require('./user_note_detail.model');
+const TransModel = require('../transaction/transaction.model')
+const UserTrackingModel = require('../user_trans_tracking/user_trans_tracking.model')
 const PermissionDeniedError = require('../core/error/PermissionDeniedError')
 const MembersNoteNotEmptyError = require('../core/error/MembersNoteNotEmptyError')
 const NoteNotFoundError = require('../core/error/NoteNotFoundError')
@@ -28,8 +27,6 @@ module.exports = {
                 .then(n => n.populate('members.user', 'fullName picture')
                     .populate('admin', 'fullName picture')
                     .execPopulate());
-
-            data.members.forEach(member => new UserNoteDetailModel({ note, user: member.user}).save())        
             res.status(201).send({ note });
 
         } catch (err) {
@@ -126,28 +123,9 @@ module.exports = {
             await note.save()
                 .then(n => n.populate('members.user', 'fullName picture')
                     .populate('admin', 'fullName picture')
-                    .execPopulate());
+                    .execPopulate());;
 
             res.status(201).send({ note: note._id, status: note.status });
-        } catch (err) {
-            res.status(404).send(err);
-        }
-    },
-
-    shareMoney: async (req, res) => {
-        try {
-            const noteId = req.body.id;
-            const note = await NoteModel.findById(noteId);
-            if (!note) {
-                throw new NoteNotFoundError();
-            }
-            note.status = 'COMPLETED';
-            await note.save();
-
-            const noteDetails = await UserNoteDetailModel.find({ note })
-                .then(detail => detail.populate('user', 'fullName picture'));
-
-            res.status(201).send({ note });
         } catch (err) {
             res.status(404).send(err);
         }

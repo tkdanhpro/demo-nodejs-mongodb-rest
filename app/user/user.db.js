@@ -1,4 +1,5 @@
 const UserModel = require('./user.model');
+const ForgotPasswordModel = require('./../forgot_password/forgot_password');
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken');
 const validator = require('validator');
@@ -11,7 +12,10 @@ const PasswordLengthRequireError = require('./../core/error/PasswordLengthRequir
 const AuthenticationFailedError = require('./../core/error/AuthenticationFailedError');
 const InvalidUsernameError = require('./../core/error/InvalidUsernameError');
 const UsernameLengthRequireError = require('./../core/error/UsernameLengthRequireError');
-const InvalidPasswordError = require('./../core/error/InvalidPasswordError');
+const EmailNotFoundError = require('./../core/error/EmailNotFoundError');
+const InvalidVerifyCode = require('./../core/error/InvalidVerifyCode');
+const UserNotFoundError = require('./../core/error/UserNotFoundError');
+const Email = require('./../core/error/Us');
 
 const JWT_KEY = '@Money!Xi@oLin$@Tranvan2@@';
 
@@ -173,6 +177,61 @@ module.exports = {
         } catch (err) {
             res.status(500).send({ status: 500, message: 'Ops! Something went wrong. Please try again!' });
         }
+    },
+
+    forgotPassword: async (req, res) => {
+        try {
+            const email = req.body.data.email;
+            const user = await UserModel.find({email});
+            if (!user) {
+                throw new EmailNotFoundError();
+            }
+            const code = Math.floor(100000 + Math.random() * 900000);
+            const data = new ForgotPasswordModel({ user, code});
+            await data.save()
+
+            res.send({ code })
+        } catch (err) {
+            res.status(404).send(err);
+        }
+    },
+
+    verifyForgotPasswordCode: async (req, res) => {
+        try {
+            const code = req.body.data.code;
+            const codeData = await ForgotPasswordModel.find({code, verified: false});
+            if (!codeData) {
+                throw new InvalidVerifyCode();
+            }
+            codeData.verified = true;
+            codeData.save()
+            
+            res.send({ verified : true })
+        } catch (err) {
+            res.status(404).send(err);
+        }
+    },
+
+    resetPassword: async (req, res) => {
+        const code = req.body.data.code;
+        const codeData = await ForgotPasswordModel.find({code, verified: true})
+        if (!codeData) {
+            throw new InvalidVerifyCode();
+        }
+        var user = await UserModel.findById(codeData.user._id)
+        if (!user) {
+            throw new UserNotFoundError();
+        }
+        const newPassword = req.body.data.newPassword;
+        const passwordHash = await bcrypt.hash(newPassword, 8);
+
+        user.passwordHash = passwordHash;
+        user.tokens = [];
+        const token = await generateAuthToken(user);
+
+        const updatedUser = await UserModel.findByIdAndUpdate(id, { user }, { new: true });
+
+        res.status(201).send({ user: updatedUser, token: token });
     },
 
     signInWithPassword: async (req, res) => {

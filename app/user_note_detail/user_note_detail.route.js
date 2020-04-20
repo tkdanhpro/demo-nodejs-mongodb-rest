@@ -65,14 +65,5 @@ noteRoute.put('/changeMembers', auth, async (req, res, next) => {
     }
 });
 
-noteRoute.put('/shareMoney', auth, async (req, res, next) => {
-    try {
-        await noteDb.shareMoney(req, res)
-
-    } catch (err) {
-        next();
-        res.status(500).send(err.message)
-    }
-});
 
 module.exports = noteRoute;
