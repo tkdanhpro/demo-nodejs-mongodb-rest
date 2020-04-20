@@ -136,18 +136,18 @@ module.exports = {
 
     shareMoney: async (req, res) => {
         try {
-            const noteId = req.body.id;
+            const noteId = req.body.data.nodeId;
+            
             const note = await NoteModel.findById(noteId);
             if (!note) {
                 throw new NoteNotFoundError();
             }
             note.status = 'COMPLETED';
             await note.save();
-
-            const noteDetails = await UserNoteDetailModel.find({ note })
-                .then(detail => detail.populate('user', 'fullName picture'));
-
-            res.status(201).send({ note });
+            console.log(note._id )
+            const noteDetails = await UserNoteDetailModel.find({ note: note._id })
+            .populate('user', 'fullName picture');
+            res.status(201).send({ note, noteDetails });
         } catch (err) {
             res.status(404).send(err);
         }

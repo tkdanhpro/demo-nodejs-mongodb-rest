@@ -21,7 +21,11 @@ const userNoteDetails = mongoose.model('user_note_details', new mongoose.Schema(
     userPaymentAmount: {
         type: Number,
         default: 0
-    },    
+    },
+    userPaidAmount: {
+        type: Number,
+        default: 0
+    },
     deleted: {
         type: Boolean,
         default: false
