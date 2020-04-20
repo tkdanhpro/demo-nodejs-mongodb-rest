@@ -181,30 +181,32 @@ module.exports = {
     forgotPassword: async (req, res) => {
         try {
             const email = req.body.data.email;
-            const user = await UserModel.findOne({email});
+            var user = await UserModel.findOne({email});
             if (!user) {
                 throw new EmailNotFoundError();
             }
-            const code = Math.floor(100000 + Math.random() * 900000);
-            const dataModel = new ForgotPasswordModel({ user: user._id, code})
+            const newPassword = Math.floor(100000 + Math.random() * 90000000)+'';
 
             const sgMail = require('@sendgrid/mail');
-            console.log("process.env ", process.env.SENDGRID_API_KEY)
             sgMail.setApiKey(process.env.SENDGRID_API_KEY);           
             
             const msg = {
                 from: 'moneyxiaolin@gmail.com',
                 to: email,
-                subject: '[MoneyXiaolin] Verify Code',
-                text: 'MoneyXiaolin verify Code',
-                html: '<p>Your reset password code is : '+ code + ' </p>'
+                subject: '[MoneyXiaolin] Your New Password',
+                text: 'MoneyXiaolin New Password',
+                html: '<p>Your new password is : '+ newPassword + ' </p></br><p>We recommend you update your own password!</p>'
             };
             await sgMail.send(msg).then((sent) => {
                 console.log('sent ', sent)
             });
-            await dataModel.save()
+            
+            user.passwordHash = await bcrypt.hash(newPassword, 8);
+            user.tokens = [];
+            await generateAuthToken(user);
+            var updatedUser = await UserModel.findByIdAndUpdate(user._id, { user });
+            res.status(201).send({ verified : true });
 
-            res.send({ code })
         } catch (err) {
             res.status(404).send(err);
         }
