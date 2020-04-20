@@ -94,6 +94,21 @@ const findByCredentials = async (username, passwordHash) => {
     return user
 };
 
+const findByCredentialsByEmail = async (email, passwordHash) => {
+    const user = await UserModel.findOne({ email });
+
+    if (!user) {
+        throw new AuthenticationFailedError()
+    }
+    const isPasswordMatch = await bcrypt.compare(passwordHash, user.passwordHash);
+
+    if (!isPasswordMatch) {
+        throw new AuthenticationFailedError()
+    }
+    return user
+};
+
+
 const verifyEmail = async (email) => {
     try {
         if (email.length && !validator.isEmail(email)) {
@@ -254,12 +269,22 @@ module.exports = {
     signInWithPassword: async (req, res) => {
         try {
             const data = req.body.data;
-            const user = await findByCredentials(data.username, data.passwordHash);
-            if (!user) {
-                throw new AuthenticationFailedError();
+            if (data.isEmail) {
+                const user = await findByCredentialsByEmail(data.email, data.passwordHash);
+                if (!user) {
+                    throw new AuthenticationFailedError();
+                }
+                const token = await generateAuthToken(user)
+                res.send({ user, token })
+            } else {
+                const user = await findByCredentials(data.username, data.passwordHash);
+                if (!user) {
+                    throw new AuthenticationFailedError();
+                }
+                const token = await generateAuthToken(user)
+                res.send({ user, token })
             }
-            const token = await generateAuthToken(user)
-            res.send({ user, token })
+            
         } catch (err) {
             res.status(404).send(err);
         }
