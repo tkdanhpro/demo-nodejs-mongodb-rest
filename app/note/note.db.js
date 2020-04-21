@@ -22,7 +22,7 @@ module.exports = {
                 throw new MembersNoteNotEmptyError();
             data.createdBy = user._id;
             data.admin = user._id;
-            data.members = data.members.concat({ user });
+            // data.members = data.members.concat({ user });
             const note = new NoteModel(data);
             await note.save()
                 .then(n => n.populate('members.user', 'fullName picture')
@@ -68,16 +68,16 @@ module.exports = {
                 .then(results => results.filter(item => item.members.filter(m => m.user).length > 0))
 
             // var notes = results.filter(item => item.members.filter(m => m.user).length > 0)
-            await asyncForEach(notes, async (note, index, array) => {
-                const transList = await TransModel.find({ note })
-                const totalCashOut = transList.map(t => t.value).reduce((a, b) => a + b, 0)
-                array[index].totalCashOut += totalCashOut
+            // await asyncForEach(notes, async (note, index, array) => {
+            //     const transList = await TransModel.find({ note })
+            //     const totalCashOut = transList.map(t => t.value).reduce((a, b) => a + b, 0)
+            //     array[index].totalCashOut += totalCashOut
 
-                const trackingList = await UserTrackingModel.find({ note, user: req.user })
+            //     const trackingList = await UserTrackingModel.find({ note, user: req.user })
 
-                const totalRemain = trackingList.map(t => t.remain).reduce((a, b) => a + b, 0)
-                array[index].totalRemain += totalRemain
-            })
+            //     const totalRemain = trackingList.map(t => t.remain).reduce((a, b) => a + b, 0)
+            //     array[index].totalRemain += totalRemain
+            // })
 
             res.status(201).send({ notes });
         } catch (err) {
@@ -88,26 +88,36 @@ module.exports = {
 
     updateNote: async (req, res) => {
         try {
-            const admin = req.user.id;
             const _id = req.body.id;
             const data = req.body.data;
-            const completedNote = await NoteModel.findOne({ _id, status: 'COMPLETED' });
-            if (completedNote) {
-                throw new NoteCompletedError()
+            var note = await NoteModel.findById(_id);
+            if (!note) {
+                throw new NoteNotFoundError()
             }
-            data.members.forEach(mem => {
+            if (note.status == 'COMPLETED') {
+                throw new NoteCompletedError()
+            }        
+            
+            await asyncForEach(data.members, async (mem, index, array) => {                
+                if (mem.isNewMember) {
+                    await new UserNoteDetailModel({ note: _id, user: mem.user}).save()
+                }
                 if (mem.isLeft && mem.totalPayment == 0 && mem.totalRemain == 0)
                     mem.deleted = true;
+                console.log(mem)
                 return mem
             });
-
-            const note = await NoteModel.findOneAndUpdate({ _id, admin }, data, { new: true })
+            note.admin = data.admin;
+            note.status = data.status;
+            note.members = data.members;
+            note.name = data.name;
+            note.description = data.description;
+            note.save()    
                 .then(note => note.filter(n => n)
                     .populate('members.user', 'username fullName picture')
                     .populate('admin', 'username fullName picture')
                     .execPopulate());
 
-            if (!note) throw new PermissionDeniedError();
             res.status(201).send({ note });
         } catch (err) {
             res.status(404).send(err);
@@ -137,7 +147,7 @@ module.exports = {
 
     shareMoney: async (req, res) => {
         try {
-            const noteId = req.body.data.nodeId;
+            const noteId = req.params.id;
             
             const note = await NoteModel.findById(noteId);
             if (!note) {
