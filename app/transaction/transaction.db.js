@@ -12,8 +12,7 @@ module.exports = {
             var note = await NoteModel.findById(req.body.data.note);
             if (!note) {
                 throw new NoteNotFoundError()
-            }
-            
+            }            
 
             const data = req.body.data;
             data.createdBy = req.user._id;
@@ -84,7 +83,7 @@ module.exports = {
             });
 
             await UserTransTrackingModel.insertMany(userTransTrackingList);
-            var totalPayment = note.totalCashOut + trans.value;     
+            var totalPayment = note.totalCashOut;     
 
             const userRemainAmount = payerNoteDetail.userRemainAmount;
             const userPaymentAmount = payerNoteDetail.userPaymentAmount;
