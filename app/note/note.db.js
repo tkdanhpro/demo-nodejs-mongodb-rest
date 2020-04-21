@@ -116,19 +116,20 @@ module.exports = {
 
     changeStatus: async (req, res) => {
         try {
-            const noteId = req.body.id;
+            const noteId = req.body.data.id;
             const note = await NoteModel.findById(noteId);
             if (!note) {
                 throw new NoteNotFoundError();
             }
 
-            note.status = req.body.status;
-            await note.save()
-                .then(n => n.populate('members.user', 'fullName picture')
-                    .populate('admin', 'fullName picture')
-                    .execPopulate());
+            note.status = req.body.data.status;
+            await note.save();
+                // .then(n => n.populate('members.user', 'fullName picture')
+                //     .populate('admin', 'fullName picture')
+                //     .execPopulate());
 
-            res.status(201).send({ note: note._id, status: note.status });
+            // res.status(201).send({ note: note._id, status: note.status });
+            res.status(201).send({ status: note.status});
         } catch (err) {
             res.status(404).send(err);
         }
