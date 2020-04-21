@@ -144,7 +144,7 @@ module.exports = {
             }
             note.status = 'COMPLETED';
             await note.save();
-            console.log(note._id )
+            // console.log(note._id )
             const noteDetails = await UserNoteDetailModel.find({ note: note._id })
             .populate('user', 'fullName picture');
             res.status(201).send({ note, noteDetails });
@@ -191,6 +191,22 @@ module.exports = {
         } catch (err) {
             res.status(404).send(err);
         }
-    }
+    },
+
+    deleteNote: async (req, res) => {
+        try {
+            const _id = req.body.id;
+            var note = await NoteModel.findById( _id );
+            if (!note) {
+                throw new NoteNotFoundError()
+            }
+            note.status = 'CLOSED';
+            await note.save();
+
+            res.status(201).send({ deleted: true });
+        } catch (err) {
+            res.status(404).send(err);
+        }
+    },
 
 }

@@ -43,7 +43,7 @@ const notes = mongoose.model('notes', new mongoose.Schema({
     ],
     status: {
         type: String,
-        enum: ['OPENING', 'COMPLETED'],
+        enum: ['OPENING', 'COMPLETED', 'CLOSED'],
         default: 'OPENING'
     },
     totalCashIn: {
