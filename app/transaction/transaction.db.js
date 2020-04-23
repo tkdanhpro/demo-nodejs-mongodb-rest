@@ -218,8 +218,10 @@ module.exports = {
                 userDetail.save()
 
             })
-            
-            var totalPayment = await NoteModel.findById(note._id).totalCashOut;     
+            var updateNote = await NoteModel.findById(note._id);
+            updateNote.totalCashOut -= trans.value;
+            updateNote.save();
+            var totalPayment = updateNote.totalCashOut;     
 
             const userRemainAmount = payerNoteDetail.userRemainAmount;
             const userPaymentAmount = payerNoteDetail.userPaymentAmount;
