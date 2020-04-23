@@ -105,7 +105,6 @@ module.exports = {
                 }
                 if (mem.isLeft && mem.totalPayment == 0 && mem.totalRemain == 0)
                     mem.deleted = true;
-                console.log(mem)
                 return mem
             });
             note.admin = data.admin;
@@ -150,7 +149,7 @@ module.exports = {
         try {
             const noteId = req.params.id;
             
-            const note = await NoteModel.findById(noteId);
+            const note = await NoteModel.findById(noteId, { name: 1, description: 1, status: 1, totalCashIn: 1, totalCashOut: 1, totalRemain: 1, created_at: 1, updated_at: 1, createdBy: 1, admin: 1 });
             if (!note) {
                 throw new NoteNotFoundError();
             }
@@ -159,7 +158,7 @@ module.exports = {
             // console.log(note._id )
             const noteDetails = await UserNoteDetailModel.find({ note: note._id })
             .populate('user', 'fullName picture');
-            res.status(201).send({ note, noteDetails });
+            res.status(201).send({ note, members: noteDetails });
         } catch (err) {
             res.status(404).send(err);
         }
