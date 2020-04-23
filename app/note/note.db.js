@@ -40,11 +40,10 @@ module.exports = {
     getById: async (req, res) => {
         try {
             const notes = await NoteModel.findById(req.params.id,
-                { name: 1, description: 1, status: 1, totalCashIn: 1, totalCashOut: 1, totalRemain: 1, created_at: 1, updated_at: 1, 'members.user': 1 })
+                { name: 1, description: 1, status: 1, totalCashIn: 1, totalCashOut: 1, totalRemain: 1, created_at: 1, updated_at: 1, 'members.user': 1, createdBy: 1, admin: 1 })
                 .populate('members.user', 'fullName picture')
-            // .populate('members.user', 'username fullName picture -_id')
-            // .populate('createdBy', 'username fullName picture -_id')
-            // .populate('admin', 'username fullName picture -_id')
+                .populate('createdBy', 'username fullName picture ')
+                .populate('admin', 'username fullName picture ')
 
             // await asyncForEach(notes, async (note, index, array) => {
             //     const transList = await TransModel.find({ note })
@@ -63,8 +62,10 @@ module.exports = {
         try {
             const _id = req.user._id;
             const notes = await NoteModel.find({ 'members.user': { '$eq': _id, '$exists': true } }
-                , { name: 1, description: 1, status: 1, totalCashIn: 1, totalCashOut: 1, totalRemain: 1, created_at: 1, updated_at: 1, 'members.user': 1 })
+                , { name: 1, description: 1, status: 1, totalCashIn: 1, totalCashOut: 1, totalRemain: 1, created_at: 1, updated_at: 1, 'members.user': 1, createdBy: 1, admin: 1 })
                 .populate('members.user', 'fullName picture')
+                .populate('createdBy', 'username fullName picture ')
+                .populate('admin', 'username fullName picture ')
                 .then(results => results.filter(item => item.members.filter(m => m.user).length > 0))
 
             // var notes = results.filter(item => item.members.filter(m => m.user).length > 0)
