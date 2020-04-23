@@ -48,4 +48,14 @@ transRoute.put('/update', auth, async (req, res, next) => {
     }
 });
 
+transRoute.delete('/delete/:transId', auth, async (req, res, next) => {
+    try {
+        await transDb.deleteTrans(req, res)
+
+    } catch (err) {
+        next();
+        res.status(500).send(err.message)
+    }
+});
+
 module.exports = transRoute;
