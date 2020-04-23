@@ -83,13 +83,12 @@ module.exports = {
             });
 
             await UserTransTrackingModel.insertMany(userTransTrackingList);
-            var totalPayment = note.totalCashOut;     
 
             const userRemainAmount = payerNoteDetail.userRemainAmount;
             const userPaymentAmount = payerNoteDetail.userPaymentAmount;
             const userPaidAmount = payerNoteDetail.userPaidAmount;
 
-            res.status(201).send({ trans, userRemainAmount, userPaymentAmount, userPaidAmount, totalPayment });
+            res.status(201).send({ trans, userRemainAmount, userPaymentAmount, userPaidAmount, totalCashOut: note.totalCashOut });
 
         } catch (err) {
             res.status(404).send(err);
@@ -170,12 +169,12 @@ module.exports = {
 
             await UserTransTrackingModel.insertMany(userTransTrackingList);
             
-            var totalPayment = note.totalCashOut + trans.value;     
+            var totalCashOut = note.totalCashOut + trans.value;     
 
             const userRemainAmount = payerNoteDetail.userRemainAmount;
             const userPaymentAmount = payerNoteDetail.userPaymentAmount;
             const userPaidAmount = payerNoteDetail.userPaidAmount;
-            res.status(201).send({ trans, userRemainAmount, userPaymentAmount, userPaidAmount, totalPayment });
+            res.status(201).send({ trans, userRemainAmount, userPaymentAmount, userPaidAmount, totalCashOut });
 
         } catch (err) {
             res.status(404).send(err);
@@ -221,12 +220,12 @@ module.exports = {
             var updateNote = await NoteModel.findById(note._id);
             updateNote.totalCashOut -= trans.value;
             updateNote.save();
-            var totalPayment = updateNote.totalCashOut;     
+            var totalCashOut = updateNote.totalCashOut;     
 
             const userRemainAmount = payerNoteDetail.userRemainAmount;
             const userPaymentAmount = payerNoteDetail.userPaymentAmount;
             const userPaidAmount = payerNoteDetail.userPaidAmount;
-            res.status(201).send({ trans : {_id: trans._id, deleted: true, note: trans.note}, userRemainAmount, userPaymentAmount, userPaidAmount, totalPayment });
+            res.status(201).send({ trans : {_id: trans._id, deleted: true, note: trans.note}, userRemainAmount, userPaymentAmount, userPaidAmount, totalCashOut });
 
         } catch (err) {
             res.status(404).send(err);
@@ -254,9 +253,9 @@ module.exports = {
 
     getByNote: async (req, res) => {
         try {
-            const note = req.params.noteId;
+            const noteId = req.params.noteId;
 
-            var trans = await TransModel.find({ note })
+            var trans = await TransModel.find({ note : noteId})
                 .populate('users', 'fullName picture')
                 .populate('payer', 'fullName picture')
                 .populate('createdBy', 'fullName picture');
@@ -264,9 +263,8 @@ module.exports = {
             if (!trans) {
                 throw new TransNotFoundError()
             }
-            var totalPayment = 0;
             
-            const userTrackings = await UserTransTrackingModel.find({ note, user: req.user })
+            const userTrackings = await UserTransTrackingModel.find({ note : noteId, user: req.user })
             // await asyncForEach(trans, async (tran, index, array) => {
             trans.forEach((tran, index, array) => {
                 totalPayment += tran.value;
@@ -277,6 +275,8 @@ module.exports = {
                 }
                 
             })
+
+            const note = await NoteModel.findById(noteId)
             
             var userRemainAmount = 0;
             var userPaymentAmount = 0;
@@ -286,7 +286,7 @@ module.exports = {
             })
             var userPaidAmount = userRemainAmount + userPaymentAmount;
 
-            res.status(201).send({ trans, userRemainAmount, userPaymentAmount, userPaidAmount, totalPayment })
+            res.status(201).send({ trans, userRemainAmount, userPaymentAmount, userPaidAmount, totalCashOut: note.totalCashOut })
         } catch (err) {
             res.status(404).send(err);
         }
