@@ -57,7 +57,8 @@ const notes = mongoose.model('notes', new mongoose.Schema({
     totalRemain: {
         type: Number,
         default: 0
-    }
+    },
+    userRemainAmount: Number
 }, {
     timestamps: {
         createdAt: 'created_at',
