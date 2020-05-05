@@ -3,6 +3,7 @@ const NoteModel = require('./../note/note.model')
 const UserTransTrackingModel = require('../user_trans_tracking/user_trans_tracking.model')
 const UserNoteDetailModel = require('../user_note_detail/user_note_detail.model')
 const NoteNotFoundError = require('./../core/error/NoteNotFoundError')
+const UserNotFoundError = require('./../core/error/UserNotFoundError')
 const TransNotFoundError = require('./../core/error/TransNotFoundError')
 const asyncForEach = require('./../core/common/common')
 
@@ -69,9 +70,10 @@ module.exports = {
                 userTransTrackingList.push(new UserTransTrackingModel(trackingData))
 
                 // update user's note detail
-                var userNoteDetail = await UserNoteDetailModel.findOne({note, user: payment.user});
+                var userNoteDetail = await UserNoteDetailModel.findOne({note : note._id, user: payment.user});
+
                 if (!userNoteDetail) {
-                    throw new NoteNotFoundError("User's note not found!")
+                    throw new UserNotFoundError("User's note not found!")
                 }
                 
                 userNoteDetail.userRemainAmount += trackingData.remain;
@@ -81,8 +83,8 @@ module.exports = {
                 if (payment.user == data.payer) payerNoteDetail = userNoteDetail
         
             });
-
-            await UserTransTrackingModel.insertMany(userTransTrackingList);
+            
+            UserTransTrackingModel.insertMany(userTransTrackingList);
 
             const userRemainAmount = payerNoteDetail.userRemainAmount;
             const userPaymentAmount = payerNoteDetail.userPaymentAmount;
@@ -102,11 +104,11 @@ module.exports = {
             data.payer = req.user._id;
             const transId = data._id
 
-            const ts = await TransModel.findById(transId);
-            if (!ts) {
+            const oldTrans = await TransModel.findById(transId);
+            if (!oldTrans) {
                 throw new TransNotFoundError()
             }
-            const note = await NoteModel.findById(data.note);
+            var note = await NoteModel.findById(data.note);
             if (!note) {
                 throw new NoteNotFoundError()
             }
@@ -120,22 +122,22 @@ module.exports = {
                 })
             }
 
-            // set data for transactions
+            // set data for new transactions
             const users = data.payments.map(payment => payment.user);
             data.users = users;
-            const trans = await TransModel.findByIdAndUpdate({ _id: transId }, data, { new: true })
+            const trans = await TransModel.findByIdAndUpdate({ _id: transId }, data)
                     .populate('users', 'fullName picture')
                     .populate('payer', 'fullName picture')
                     .populate('createdBy', 'fullName picture');
 
             // delete previous tracking list
-            await UserTransTrackingModel.deleteMany({note: note._id, trans: transId})
+            const previousTrackings = await UserTransTrackingModel.find({note: note._id, trans: transId})
+            UserTransTrackingModel.deleteMany(previousTrackings)
 
             // add new user trans tracking
             var userPayment = 0;
             var payerNoteDetail = {};
             var userTransTrackingList = [];
-
             await asyncForEach(data.payments, async (payment, index, array) => {       
                 var trackingData = {
                     user: payment.user,
@@ -154,13 +156,15 @@ module.exports = {
                 userTransTrackingList.push(new UserTransTrackingModel(trackingData))
 
                 // update user's note detail
-                var userNoteDetail = await UserNoteDetailModel.findOne({note, user: payment.user});
+                var userNoteDetail = await UserNoteDetailModel.findOne({note: note._id, user: payment.user});
                 if (!userNoteDetail) {
                     throw new NoteNotFoundError("User's note not found!")
                 }
                 
-                userNoteDetail.userRemainAmount += trackingData.remain;
-                userNoteDetail.userPaymentAmount += trackingData.payment;
+                
+                const oldValues = previousTrackings.filter(tracking =>  tracking.user.equals(payment.user)) || [{payment: 0, remain: 0}];
+                userNoteDetail.userRemainAmount += trackingData.remain - oldValues[0].remain;
+                userNoteDetail.userPaymentAmount += trackingData.payment - oldValues[0].payment;
                 userNoteDetail.userPaidAmount = userNoteDetail.userRemainAmount + userNoteDetail.userPaymentAmount;
                 userNoteDetail = await userNoteDetail.save(); 
                 if (payment.user == data.payer) payerNoteDetail = userNoteDetail
@@ -168,8 +172,11 @@ module.exports = {
             });
 
             await UserTransTrackingModel.insertMany(userTransTrackingList);
-            
-            var totalCashOut = note.totalCashOut + trans.value;     
+            console.log("oldTrans ",oldTrans.value)
+            console.log("newTrans ",data.value)
+            var totalCashOut = note.totalCashOut - oldTrans.value + data.value;
+            note.totalCashOut = totalCashOut;
+            NoteModel.save(note)
 
             const userRemainAmount = payerNoteDetail.userRemainAmount;
             const userPaymentAmount = payerNoteDetail.userPaymentAmount;
