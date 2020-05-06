@@ -272,10 +272,12 @@ module.exports = {
                 throw new TransNotFoundError()
             }
             
+            
             const userTrackings = await UserTransTrackingModel.find({ note : noteId, user: req.user })
+            
             // await asyncForEach(trans, async (tran, index, array) => {
             trans.forEach((tran, index, array) => {
-                totalPayment += tran.value;
+                // totalPayment += tran.value;
                 
                 const item = userTrackings.filter(tracking => tracking.trans.equals(tran._id))
                 if (item.length > 0) {
@@ -285,7 +287,7 @@ module.exports = {
             })
 
             const note = await NoteModel.findById(noteId)
-            
+            console.log(note)
             var userRemainAmount = 0;
             var userPaymentAmount = 0;
             userTrackings.forEach(tracking => {
