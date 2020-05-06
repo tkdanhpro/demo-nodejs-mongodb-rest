@@ -125,14 +125,15 @@ module.exports = {
             // set data for new transactions
             const users = data.payments.map(payment => payment.user);
             data.users = users;
-            const trans = await TransModel.findByIdAndUpdate({ _id: transId }, data)
+            const trans = await TransModel.findByIdAndUpdate({ _id: transId }, data, {new: true})
                     .populate('users', 'fullName picture')
                     .populate('payer', 'fullName picture')
                     .populate('createdBy', 'fullName picture');
-
             // delete previous tracking list
             const previousTrackings = await UserTransTrackingModel.find({note: note._id, trans: transId})
-            UserTransTrackingModel.deleteMany(previousTrackings)
+            UserTransTrackingModel.deleteMany({note: note._id, trans: transId})
+            .then(result => console.log(`Deleted ${result.deletedCount} item(s).`))
+            .catch(err => console.error(`Delete failed with error: ${err}`))
 
             // add new user trans tracking
             var userPayment = 0;
@@ -159,8 +160,7 @@ module.exports = {
                 var userNoteDetail = await UserNoteDetailModel.findOne({note: note._id, user: payment.user});
                 if (!userNoteDetail) {
                     throw new NoteNotFoundError("User's note not found!")
-                }
-                
+                }                
                 
                 const oldValues = previousTrackings.filter(tracking =>  tracking.user.equals(payment.user)) || [{payment: 0, remain: 0}];
                 userNoteDetail.userRemainAmount += trackingData.remain - oldValues[0].remain;
@@ -171,12 +171,10 @@ module.exports = {
 
             });
 
-            await UserTransTrackingModel.insertMany(userTransTrackingList);
-            console.log("oldTrans ",oldTrans.value)
-            console.log("newTrans ",data.value)
+            UserTransTrackingModel.insertMany(userTransTrackingList);
             var totalCashOut = note.totalCashOut - oldTrans.value + data.value;
             note.totalCashOut = totalCashOut;
-            NoteModel.save(note)
+            note.save();
 
             const userRemainAmount = payerNoteDetail.userRemainAmount;
             const userPaymentAmount = payerNoteDetail.userPaymentAmount;
@@ -200,7 +198,10 @@ module.exports = {
             trans.save();
             const note = trans.note;
             // delete previous tracking list
-            await UserTransTrackingModel.deleteMany({note: note._id, trans: transId})
+            //const previousTrackings = await UserTransTrackingModel.find({note: note._id, trans: transId})
+            UserTransTrackingModel.deleteMany({note: note._id, trans: transId})
+            .then(result => console.log(`Deleted ${result.deletedCount} item(s).`))
+            .catch(err => console.error(`Delete failed with error: ${err}`))
 
             var userNoteDetails = await UserNoteDetailModel.find({note});
             const _userId = req.user._id;
