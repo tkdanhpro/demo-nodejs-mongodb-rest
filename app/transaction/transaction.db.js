@@ -14,12 +14,12 @@ module.exports = {
             if (!note) {
                 throw new NoteNotFoundError()
             }
-            console.log("Data trans ", data)
+            
 
             const data = req.body.data;
             data.createdBy = req.user._id;
             data.payer = req.user._id;
-
+            console.log("Data trans ", data)
             // update note
             if (data.type == 'OUT') note.totalCashOut += data.value;
             if (data.type == 'IN') note.totalCashIn += data.value;
