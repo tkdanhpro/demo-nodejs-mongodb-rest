@@ -22,7 +22,7 @@ module.exports = {
                 throw new MembersNoteNotEmptyError();
             data.createdBy = user._id;
             data.admin = user._id;
-            // data.members = data.members.concat({ user });
+            data.members = data.members.concat({ user });
             const note = new NoteModel(data);
             await note.save()
                 .then(n => n.populate('members.user', 'fullName picture')
@@ -125,13 +125,13 @@ module.exports = {
 
     changeStatus: async (req, res) => {
         try {
-            const noteId = req.body.data.id;
+            const noteId = req.body.id;
             const note = await NoteModel.findById(noteId);
             if (!note) {
                 throw new NoteNotFoundError();
             }
 
-            note.status = req.body.data.status;
+            note.status = req.body.status;
             await note.save();
                 // .then(n => n.populate('members.user', 'fullName picture')
                 //     .populate('admin', 'fullName picture')
