@@ -13,7 +13,8 @@ module.exports = {
             var note = await NoteModel.findById(req.body.data.note);
             if (!note) {
                 throw new NoteNotFoundError()
-            }            
+            }
+            console.log("Data trans ", data)
 
             const data = req.body.data;
             data.createdBy = req.user._id;
@@ -273,21 +274,21 @@ module.exports = {
             }
             
             
-            const userTrackings = await UserTransTrackingModel.find({ note : noteId, user: req.user })
+            const userTrackings = await UserTransTrackingModel.find({ note : noteId, user: req.user._id })
             
             // await asyncForEach(trans, async (tran, index, array) => {
             trans.forEach((tran, index, array) => {
                 // totalPayment += tran.value;
-                
+                console.log(userTrackings)
                 const item = userTrackings.filter(tracking => tracking.trans.equals(tran._id))
                 if (item.length > 0) {
                     array[index].remainAmount += item[0].remain
+                    console.log(item[0])
                 }
                 
             })
 
             const note = await NoteModel.findById(noteId)
-            console.log(note)
             var userRemainAmount = 0;
             var userPaymentAmount = 0;
             userTrackings.forEach(tracking => {
