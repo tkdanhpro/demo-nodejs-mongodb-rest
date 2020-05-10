@@ -151,6 +151,7 @@ module.exports = {
                     userPayment += trackingData.payment;
                     trackingData.type = 'CASHBACK';
                     trackingData.remain = data.value - trackingData.payment;
+                    trans.remainAmount = trackingData.remain
                 } else {
                     trackingData.type = 'DEBT';
                     trackingData.remain = - trackingData.payment;
@@ -163,10 +164,13 @@ module.exports = {
                     throw new NoteNotFoundError("User's note not found!")
                 }                
                 
-                const oldValues = previousTrackings.filter(tracking =>  tracking.user.equals(payment.user)) || [{payment: 0, remain: 0}];
+                var oldValues = previousTrackings.filter(tracking =>  tracking.user.equals(payment.user));
+                if (oldValues.length < 1)
+                oldValues.push({payment: 0, remain: 0})
                 userNoteDetail.userRemainAmount += trackingData.remain - oldValues[0].remain;
                 userNoteDetail.userPaymentAmount += trackingData.payment - oldValues[0].payment;
                 userNoteDetail.userPaidAmount = userNoteDetail.userRemainAmount + userNoteDetail.userPaymentAmount;
+
                 userNoteDetail = await userNoteDetail.save(); 
                 if (payment.user == data.payer) payerNoteDetail = userNoteDetail
 
