@@ -194,6 +194,14 @@ userRoute.post('/fb/verify_token', (req, res) => {
   }
 });
 
+userRoute.post('/apple/verify', async (req, res) => {
+  try {
+    userDb.verifyAppleAccount(req, res)
+  } catch (error) {
+    res.send(error)
+  }
+});
+
 userRoute.get("/all", async (req, res) => {
   // var data = {};
   userDb.getUsers({}, res);

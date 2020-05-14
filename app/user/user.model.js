@@ -46,7 +46,7 @@ const users = mongoose.model('users', new mongoose.Schema({
     ],
     type: {
         type: String,
-        enum: ['FACEBOOK', 'GOOGLE', 'NORMAL']
+        enum: ['FACEBOOK', 'GOOGLE', 'NORMAL', 'APPLE']
     },
 
     platform: String,
@@ -60,6 +60,12 @@ const users = mongoose.model('users', new mongoose.Schema({
         sparse: true
     },
     googleId: {
+        type: String,
+        trim: true,
+        unique: true,
+        sparse: true
+    },
+    appleId: {
         type: String,
         trim: true,
         unique: true,

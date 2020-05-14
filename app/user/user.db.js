@@ -59,6 +59,18 @@ async function generateGoogleAuthToken(user) {
     return token;
 }
 
+async function generateAppleAuthToken(user) {
+    const payload = {
+        id: user.id,
+        appleId: user.appleId
+    };
+
+    const token = jwt.sign(payload, JWT_KEY);
+    user.tokens = user.tokens.concat({ token });
+    await user.save()
+    return token;
+}
+
 async function addUser(user) {
     if (user.passwordHash !== undefined & user.passwordHash !== '') {
         user.passwordHash = await bcrypt.hash(user.passwordHash, 8);
@@ -71,6 +83,9 @@ async function addUser(user) {
             break;
         case "GOOGLE":
             await generateGoogleAuthToken(user);
+            break;
+        case "APPLE":
+            await generateAppleAuthToken(user);
             break;
         default:
             await generateAuthToken(user);
@@ -166,6 +181,34 @@ module.exports = {
         }
         else {
             let newUser = new UserModel(userData);
+            await addUser(newUser);
+            res.send({ user: newUser, token: newUser.tokens[0].token })
+        }
+    },
+
+    verifyAppleAccount: async (req, res) => {
+        let data = req.body.data;
+        const user = await UserModel.findOne({ appleId: data.userId }, (err, result) => {
+            if (err || !result) {
+                console.log(err);
+                return err;
+            }
+            return result;
+
+        });
+
+        if (user !== null && Object.keys(user)) {
+            const token = await generateAuthToken(user)
+            res.send({ user, token })
+        }
+        else {
+            let newUser = new UserModel({
+                type: 'APPLE',
+                appleId: data.userId,
+                fullName: data.fullName,
+                email: data.email
+
+            });
             await addUser(newUser);
             res.send({ user: newUser, token: newUser.tokens[0].token })
         }
