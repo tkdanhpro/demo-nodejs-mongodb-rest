@@ -131,7 +131,7 @@ module.exports = {
                 throw new NoteNotFoundError();
             }
 
-            if (!req.user.equals(note.user)) {
+            if (!req.user._id.equals(note.admin)) {
                 throw new PermissionDeniedError();
             }
 
