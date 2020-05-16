@@ -184,6 +184,7 @@ userRoute.post('/fb/verify_token', (req, res) => {
             "totalSpentAmount": 0,
             "totalLoanAmount": 0
           }
+          
 
           userDb.verifyFbAccount(userData, res);
         }
