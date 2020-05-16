@@ -15,7 +15,7 @@ const UsernameLengthRequireError = require('./../core/error/UsernameLengthRequir
 const EmailNotFoundError = require('./../core/error/EmailNotFoundError');
 const InvalidVerifyCode = require('./../core/error/InvalidVerifyCode');
 const UserNotFoundError = require('./../core/error/UserNotFoundError');
-const JWT_KEY = '@Money!Xi@oLin$@Tranvan2@@';
+const JWT_KEY = process.env.JWT_KEY;
 require('dotenv').config();
 
 const usernameRegex = /^[a-zA-Z0-9]+$/
