@@ -131,6 +131,10 @@ module.exports = {
                 throw new NoteNotFoundError();
             }
 
+            if (!req.user.equals(note.user)) {
+                throw new PermissionDeniedError();
+            }
+
             note.status = req.body.status;
             await note.save();
                 // .then(n => n.populate('members.user', 'fullName picture')

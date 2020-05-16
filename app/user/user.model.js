@@ -11,7 +11,6 @@ const users = mongoose.model('users', new mongoose.Schema({
     },
     fullName: {
         type: String,
-        required: true,
         trim: true
     },
     birthday: {
