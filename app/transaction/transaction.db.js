@@ -136,24 +136,24 @@ module.exports = {
             .then(result => console.log(`Deleted ${result.deletedCount} item(s).`))
             .catch(err => console.error(`Delete failed with error: ${err}`))
 
-            var paymentUsers = data.payments.map(p => p.user);
-            console.log("paymentUsers ", paymentUsers);
+            // var paymentUsers = data.payments.map(p => p.user);
+            // console.log("paymentUsers ", paymentUsers);
             
-            var removedUsersTracking = previousTrackings.filter(tracking =>  !paymentUsers.includes(tracking.user));
-            console.log("removedUsersTracking ", removedUsersTracking);
-            if (removedUsersTracking.length > 0) {
-                await asyncForEach(removedUsersTracking, async (tracking, index, array) => {
-                    console.log("tracking ", tracking);
-                    var userNoteDetail = await UserNoteDetailModel.findOne({note: note._id, user: tracking.user});                   
-                    console.log("userNoteDetail ", userNoteDetail);
-                    userNoteDetail.userRemainAmount -= tracking.remain;
-                    userNoteDetail.userPaymentAmount -= tracking.payment;
-                    userNoteDetail.userPaidAmount = userNoteDetail.userRemainAmount + userNoteDetail.userPaymentAmount;
+            // var removedUsersTracking = previousTrackings.filter(tracking =>  !paymentUsers.includes(tracking.user));
+            // console.log("removedUsersTracking ", removedUsersTracking);
+            // if (removedUsersTracking.length > 0) {
+            //     await asyncForEach(removedUsersTracking, async (tracking, index, array) => {
+            //         console.log("tracking ", tracking);
+            //         var userNoteDetail = await UserNoteDetailModel.findOne({note: note._id, user: tracking.user});                   
+            //         console.log("userNoteDetail ", userNoteDetail);
+            //         userNoteDetail.userRemainAmount -= tracking.remain;
+            //         userNoteDetail.userPaymentAmount -= tracking.payment;
+            //         userNoteDetail.userPaidAmount = userNoteDetail.userRemainAmount + userNoteDetail.userPaymentAmount;
 
-                    userNoteDetail = await userNoteDetail.save(); 
+            //         userNoteDetail = await userNoteDetail.save(); 
                     
-                })
-            }
+            //     })
+            // }
             
 
             // add new user trans tracking
