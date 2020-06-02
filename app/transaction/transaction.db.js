@@ -233,7 +233,7 @@ module.exports = {
             // .then(result => console.log(`Deleted ${result.deletedCount} item(s).`))
             // .catch(err => console.error(`Delete failed with error: ${err}`))
 
-            UserTransTrackingModel.updateMany({note: note._id, trans: transId}, {"$set":{"deleted": true}})
+            await UserTransTrackingModel.updateMany({note: note._id, trans: transId}, {"$set":{ deleted: true}})
 
             var userNoteDetails = await UserNoteDetailModel.find({note});
             const _userId = req.user._id;
@@ -286,7 +286,7 @@ module.exports = {
             trans.save();
             const note = trans.note;
 
-            UserTransTrackingModel.updateMany({note: note._id, trans: transId}, {"$set":{"deleted": false}})
+            await UserTransTrackingModel.updateMany({note: note._id, trans: transId}, {"$set":{"deleted": false}})
 
             var userNoteDetails = await UserNoteDetailModel.find({note});
             const _userId = req.user._id;
@@ -297,9 +297,10 @@ module.exports = {
                 var userPaymentAmount = 0;
                 var userPaidAmount = 0;
                 if (userTrackings) {
-                    userRemainAmount    += userTrackings.map(t => t.userRemainAmount).reduce((a,b) => a + b, 0);
-                    userPaymentAmount   += userTrackings.map(t => t.userPaymentAmount).reduce((a,b) => a + b, 0);
-                    userPaidAmount      += userTrackings.map(t => t.userPaidAmount).reduce((a,b) => a + b, 0);
+                    userRemainAmount    += userTrackings.map(t => t.remain).reduce((a,b) => a + b, 0);                    
+                    userPaymentAmount   += userTrackings.map(t => t.payment).reduce((a,b) => a + b, 0);
+                    // userPaidAmount      += userTrackings.map(t => t.userPaidAmount).reduce((a,b) => a + b, 0);
+                    userPaidAmount = userPaymentAmount + userRemainAmount;
                 }
                 array[index].userRemainAmount = userRemainAmount;
                 array[index].userPaymentAmount = userPaymentAmount;
@@ -311,7 +312,7 @@ module.exports = {
 
             })
             var updateNote = await NoteModel.findById(note._id);
-            updateNote.totalCashOut -= trans.value;
+            updateNote.totalCashOut += trans.value;
             updateNote.save();
             var totalCashOut = updateNote.totalCashOut;     
 
