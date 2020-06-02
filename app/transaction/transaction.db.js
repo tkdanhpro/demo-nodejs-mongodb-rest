@@ -140,10 +140,12 @@ module.exports = {
             console.log("paymentUsers ", paymentUsers);
             
             var removedUsersTracking = previousTrackings.filter(tracking =>  !paymentUsers.includes(tracking.user));
+            console.log("removedUsersTracking ", removedUsersTracking);
             if (removedUsersTracking.length > 0) {
                 await asyncForEach(removedUsersTracking, async (tracking, index, array) => {
+                    console.log("tracking ", tracking);
                     var userNoteDetail = await UserNoteDetailModel.findOne({note: note._id, user: tracking.user});                   
-                   
+                    console.log("userNoteDetail ", userNoteDetail);
                     userNoteDetail.userRemainAmount -= tracking.remain;
                     userNoteDetail.userPaymentAmount -= tracking.payment;
                     userNoteDetail.userPaidAmount = userNoteDetail.userRemainAmount + userNoteDetail.userPaymentAmount;
