@@ -244,10 +244,12 @@ module.exports = {
                 var userPaymentAmount = 0;
                 var userPaidAmount = 0;
                 if (userTrackings) {
-                    userRemainAmount    += userTrackings.map(t => t.userRemainAmount).reduce((a,b) => a + b, 0);
-                    userPaymentAmount   += userTrackings.map(t => t.userPaymentAmount).reduce((a,b) => a + b, 0);
-                    userPaidAmount      += userTrackings.map(t => t.userPaidAmount).reduce((a,b) => a + b, 0);
+                    userRemainAmount    += userTrackings.map(t => t.remain).reduce((a,b) => a + b, 0);                    
+                    userPaymentAmount   += userTrackings.map(t => t.payment).reduce((a,b) => a + b, 0);
+                    // userPaidAmount      += userTrackings.map(t => t.userPaidAmount).reduce((a,b) => a + b, 0);
+                    userPaidAmount = userPaymentAmount + userRemainAmount;
                 }
+                
                 array[index].userRemainAmount = userRemainAmount;
                 array[index].userPaymentAmount = userPaymentAmount;
                 array[index].userPaidAmount = userPaidAmount;
