@@ -136,6 +136,24 @@ module.exports = {
             .then(result => console.log(`Deleted ${result.deletedCount} item(s).`))
             .catch(err => console.error(`Delete failed with error: ${err}`))
 
+            var paymentUsers = data.payments.map(p => p.user);
+            console.log("paymentUsers ", paymentUsers);
+            
+            var removedUsersTracking = previousTrackings.filter(tracking =>  !paymentUsers.includes(tracking.user));
+            if (removedUsersTracking.length > 0) {
+                await asyncForEach(removedUsersTracking, async (tracking, index, array) => {
+                    var userNoteDetail = await UserNoteDetailModel.findOne({note: note._id, user: tracking.user});                   
+                   
+                    userNoteDetail.userRemainAmount -= tracking.remain;
+                    userNoteDetail.userPaymentAmount -= tracking.payment;
+                    userNoteDetail.userPaidAmount = userNoteDetail.userRemainAmount + userNoteDetail.userPaymentAmount;
+
+                    userNoteDetail = await userNoteDetail.save(); 
+                    
+                })
+            }
+            
+
             // add new user trans tracking
             var userPayment = 0;
             var payerNoteDetail = {};
@@ -166,7 +184,12 @@ module.exports = {
                 
                 var oldValues = previousTrackings.filter(tracking =>  tracking.user.equals(payment.user));
                 if (oldValues.length < 1)
-                oldValues.push({payment: 0, remain: 0})
+                    oldValues.push({payment: 0, remain: 0, user: payment.user})
+                if (trackingData.user.equals(oldValues[0].user)) {
+
+                } else {
+
+                }
                 userNoteDetail.userRemainAmount += trackingData.remain - oldValues[0].remain;
                 userNoteDetail.userPaymentAmount += trackingData.payment - oldValues[0].payment;
                 userNoteDetail.userPaidAmount = userNoteDetail.userRemainAmount + userNoteDetail.userPaymentAmount;
