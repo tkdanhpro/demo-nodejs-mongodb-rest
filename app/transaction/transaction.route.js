@@ -58,4 +58,14 @@ transRoute.delete('/delete/:transId', auth, async (req, res, next) => {
     }
 });
 
+transRoute.delete('/undelete/:transId', auth, async (req, res, next) => {
+    try {
+        await transDb.undoTrans(req, res)
+
+    } catch (err) {
+        next();
+        res.status(500).send(err.message)
+    }
+});
+
 module.exports = transRoute;

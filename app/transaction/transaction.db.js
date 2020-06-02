@@ -187,11 +187,11 @@ module.exports = {
                 var oldValues = previousTrackings.filter(tracking =>  tracking.user.equals(payment.user));
                 if (oldValues.length < 1)
                     oldValues.push({payment: 0, remain: 0, user: payment.user})
-                if (trackingData.user.equals(oldValues[0].user)) {
+                // if (trackingData.user.equals(oldValues[0].user)) {
 
-                } else {
+                // } else {
 
-                }
+                // }
                 userNoteDetail.userRemainAmount += trackingData.remain - oldValues[0].remain;
                 userNoteDetail.userPaymentAmount += trackingData.payment - oldValues[0].payment;
                 userNoteDetail.userPaidAmount = userNoteDetail.userRemainAmount + userNoteDetail.userPaymentAmount;
@@ -229,15 +229,68 @@ module.exports = {
             const note = trans.note;
             // delete previous tracking list
             //const previousTrackings = await UserTransTrackingModel.find({note: note._id, trans: transId})
-            UserTransTrackingModel.deleteMany({note: note._id, trans: transId})
-            .then(result => console.log(`Deleted ${result.deletedCount} item(s).`))
-            .catch(err => console.error(`Delete failed with error: ${err}`))
+            // UserTransTrackingModel.deleteMany({note: note._id, trans: transId})
+            // .then(result => console.log(`Deleted ${result.deletedCount} item(s).`))
+            // .catch(err => console.error(`Delete failed with error: ${err}`))
+
+            UserTransTrackingModel.updateMany({note: note._id, trans: transId}, {"$set":{"deleted": true}})
 
             var userNoteDetails = await UserNoteDetailModel.find({note});
             const _userId = req.user._id;
             var payerNoteDetail = {};
             await asyncForEach(userNoteDetails, async (userDetail, index, array) => {
-                const userTrackings = await UserTransTrackingModel.find({note: note._id, user: userDetail.user._id});
+                const userTrackings = await UserTransTrackingModel.find({note: note._id, user: userDetail.user._id, deleted: false});
+                var userRemainAmount = 0;
+                var userPaymentAmount = 0;
+                var userPaidAmount = 0;
+                if (userTrackings) {
+                    userRemainAmount    += userTrackings.map(t => t.userRemainAmount).reduce((a,b) => a + b, 0);
+                    userPaymentAmount   += userTrackings.map(t => t.userPaymentAmount).reduce((a,b) => a + b, 0);
+                    userPaidAmount      += userTrackings.map(t => t.userPaidAmount).reduce((a,b) => a + b, 0);
+                }
+                array[index].userRemainAmount = userRemainAmount;
+                array[index].userPaymentAmount = userPaymentAmount;
+                array[index].userPaidAmount = userPaidAmount;
+                if (_userId.equals(userDetail.user)) {
+                    payerNoteDetail = array[index]
+                }
+                userDetail.save()
+
+            })
+            var updateNote = await NoteModel.findById(note._id);
+            updateNote.totalCashOut -= trans.value;
+            updateNote.save();
+            var totalCashOut = updateNote.totalCashOut;     
+
+            const userRemainAmount = payerNoteDetail.userRemainAmount;
+            const userPaymentAmount = payerNoteDetail.userPaymentAmount;
+            const userPaidAmount = payerNoteDetail.userPaidAmount;
+            res.status(201).send({ trans : {_id: trans._id, deleted: true, note: trans.note}, userRemainAmount, userPaymentAmount, userPaidAmount, totalCashOut });
+
+        } catch (err) {
+            res.status(404).send(err);
+        }
+    },
+
+    undoTrans: async (req, res) => {
+        try {
+            const transId = req.params.transId
+
+            var trans = await TransModel.findById(transId);
+            if (!trans) {
+                throw new TransNotFoundError()
+            }
+            trans.deleted = false;
+            trans.save();
+            const note = trans.note;
+
+            UserTransTrackingModel.updateMany({note: note._id, trans: transId}, {"$set":{"deleted": false}})
+
+            var userNoteDetails = await UserNoteDetailModel.find({note});
+            const _userId = req.user._id;
+            var payerNoteDetail = {};
+            await asyncForEach(userNoteDetails, async (userDetail, index, array) => {
+                const userTrackings = await UserTransTrackingModel.find({note: note._id, user: userDetail.user._id, deleted: false});
                 var userRemainAmount = 0;
                 var userPaymentAmount = 0;
                 var userPaidAmount = 0;
