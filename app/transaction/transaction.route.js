@@ -58,7 +58,7 @@ transRoute.delete('/delete/:transId', auth, async (req, res, next) => {
     }
 });
 
-transRoute.delete('/undelete/:transId', auth, async (req, res, next) => {
+transRoute.put('/undelete/:transId', auth, async (req, res, next) => {
     try {
         await transDb.undoTrans(req, res)
 
