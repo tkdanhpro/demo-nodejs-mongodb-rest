@@ -5,6 +5,7 @@ const UserNoteDetailModel = require('../user_note_detail/user_note_detail.model'
 const NoteNotFoundError = require('./../core/error/NoteNotFoundError')
 const UserNotFoundError = require('./../core/error/UserNotFoundError')
 const TransNotFoundError = require('./../core/error/TransNotFoundError')
+const InvalidParamsError = require('./../core/error/InvalidParamsError')
 const asyncForEach = require('./../core/common/common')
 
 module.exports = {
@@ -224,6 +225,10 @@ module.exports = {
             if (!trans) {
                 throw new TransNotFoundError()
             }
+            if (!trans.deleted) {
+                throw new InvalidParamsError("Transaction deleted already!")
+            }
+            
             trans.deleted = true;
             trans.save();
             const note = trans.note;
@@ -281,6 +286,9 @@ module.exports = {
             var trans = await TransModel.findById(transId);
             if (!trans) {
                 throw new TransNotFoundError()
+            }
+            if (trans.deleted) {
+                throw new InvalidParamsError("Transaction un-deleted already!")
             }
             trans.deleted = false;
             trans.save();

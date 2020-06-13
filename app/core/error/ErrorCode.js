@@ -79,5 +79,8 @@ module.exports ={
 
     // Không tìm thấy user
     // User not found!
-    USER_NOT_FOUND: 708
+    USER_NOT_FOUND: 708,
+
+    INVALID_PARAMS_ERROR: 709
+
 }
