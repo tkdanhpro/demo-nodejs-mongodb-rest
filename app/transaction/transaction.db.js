@@ -225,7 +225,7 @@ module.exports = {
             if (!trans) {
                 throw new TransNotFoundError()
             }
-            if (!trans.deleted) {
+            if (trans.deleted) {
                 throw new InvalidParamsError("Transaction deleted already!")
             }
             
@@ -287,7 +287,7 @@ module.exports = {
             if (!trans) {
                 throw new TransNotFoundError()
             }
-            if (trans.deleted) {
+            if (!trans.deleted) {
                 throw new InvalidParamsError("Transaction un-deleted already!")
             }
             trans.deleted = false;
@@ -327,7 +327,7 @@ module.exports = {
             const userRemainAmount = payerNoteDetail.userRemainAmount;
             const userPaymentAmount = payerNoteDetail.userPaymentAmount;
             const userPaidAmount = payerNoteDetail.userPaidAmount;
-            res.status(201).send({ trans : {_id: trans._id, deleted: true, note: trans.note}, userRemainAmount, userPaymentAmount, userPaidAmount, totalCashOut });
+            res.status(201).send({ trans : {_id: trans._id, deleted: false, note: trans.note}, userRemainAmount, userPaymentAmount, userPaidAmount, totalCashOut });
 
         } catch (err) {
             res.status(404).send(err);
