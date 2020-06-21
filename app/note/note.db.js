@@ -184,4 +184,83 @@ module.exports = {
         }
     },
 
+    changeAdmin: async (req, res) => {
+        try {
+            const noteId = req.body.id;
+            const admin = req.body.admin;
+            const note = await NoteModel.findById(noteId);
+            if (!note) {
+                throw new NoteNotFoundError();
+            }
+
+            if (!req.user._id.equals(note.admin)) {
+                throw new PermissionDeniedError();
+            }
+
+            note.admin = admin;
+            await note.save()
+            .then(note => note
+                .populate('members.user', 'username fullName picture')
+                .populate('admin', 'username fullName picture')
+                .execPopulate());
+
+            res.status(201).send(note);
+        } catch (err) {
+            res.status(404).send(err);
+        }
+    },
+
+    left: async (req, res) => {
+        try {
+            const noteId = req.body.id;
+            const userId = req.user._id;
+            const note = await NoteModel.findById(noteId);
+            if (!note) {
+                throw new NoteNotFoundError();
+            }
+
+            const noteDetails = await UserNoteDetailModel.findOne({note: noteId, user: userId})
+            if (noteDetails == null)
+                throw new NoteNotFoundError();
+            if (noteDetails.userRemainAmount > 0 || noteDetails.userPaymentAmount > 0 || noteDetails.userPaidAmount > 0) {
+                throw new PermissionDeniedError("You cannot leave because you created transaction!");
+            }
+
+            noteDetails.isLeft=true;
+            await noteDetails.save();
+
+            res.status(201).send({ note: noteId, user: userId, isLeft: true});
+        } catch (err) {
+            res.status(404).send(err);
+        }
+    },
+
+    kick: async (req, res) => {
+        try {
+            const noteId = req.body.id;
+            const userId = req.body.user;
+            const admin = req.user._id;
+            const note = await NoteModel.findById(noteId);
+            if (!note) {
+                throw new NoteNotFoundError();
+            }
+
+            if (!admin.equals(note.admin)) {
+                throw new PermissionDeniedError();
+            }
+            const noteDetails = await UserNoteDetailModel.findOne({note: noteId, user: userId})
+            if (noteDetails == null)
+                throw new NoteNotFoundError();
+            if (noteDetails.userRemainAmount > 0 || noteDetails.userPaymentAmount > 0 || noteDetails.userPaidAmount > 0) {
+                throw new PermissionDeniedError("This user cannot leave because they created transaction!");
+            }
+
+            noteDetails.isLeft=true;
+            await noteDetails.save();
+
+            res.status(201).send({ note: noteId, user: userId, isLeft: true});
+        } catch (err) {
+            res.status(404).send(err);
+        }
+    }
 }

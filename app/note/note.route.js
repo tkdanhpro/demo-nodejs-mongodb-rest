@@ -75,4 +75,34 @@ noteRoute.get('/shareMoney/:id', auth, async (req, res, next) => {
     }
 });
 
+noteRoute.put('/changeAdmin', auth, async (req, res, next) => {
+    try {
+        await noteDb.changeAdmin(req, res)
+
+    } catch (err) {
+        next();
+        res.status(500).send(err.message)
+    }
+});
+
+noteRoute.put('/left', auth, async (req, res, next) => {
+    try {
+        await noteDb.left(req, res)
+
+    } catch (err) {
+        next();
+        res.status(500).send(err.message)
+    }
+});
+
+noteRoute.put('/kick', auth, async (req, res, next) => {
+    try {
+        await noteDb.kick(req, res)
+
+    } catch (err) {
+        next();
+        res.status(500).send(err.message)
+    }
+});
+
 module.exports = noteRoute;
