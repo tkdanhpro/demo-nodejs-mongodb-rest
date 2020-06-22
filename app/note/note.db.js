@@ -112,8 +112,7 @@ module.exports = {
             note.name = data.name;
             note.description = data.description;
             note.save()    
-                .then(note => note.filter(n => n)
-                    .populate('members.user', 'username fullName picture')
+                .then(note => note.populate('members.user', 'username fullName picture')
                     .populate('admin', 'username fullName picture')
                     .execPopulate());
 
