@@ -102,10 +102,11 @@ module.exports = {
                 if (mem.isNewMember) {
                     await new UserNoteDetailModel({ note: _id, user: mem.user}).save()
                 }
-                if (mem.isLeft && mem.totalPayment == 0 && mem.totalRemain == 0)
+                if (mem.isLeft && mem.userRemainAmount == 0 && mem.userPaymentAmount == 0)
                     mem.deleted = true;
                 return mem
             });
+            console.log("data.members ",data.members)
             note.admin = data.admin;
             note.status = data.status;
             note.members = data.members;
