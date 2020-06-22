@@ -97,7 +97,7 @@ module.exports = {
             if (note.status == 'COMPLETED') {
                 throw new NoteCompletedError()
             }        
-            
+            console.log("1 data.members ",data.members)
             await asyncForEach(data.members, async (mem, index, array) => {                
                 if (mem.isNewMember) {
                     await new UserNoteDetailModel({ note: _id, user: mem.user}).save()
@@ -106,13 +106,13 @@ module.exports = {
                     mem.deleted = true;
                 return mem
             });
-            console.log("data.members ",data.members)
+            console.log("2 data.members ",data.members)
             note.admin = data.admin;
             note.status = data.status;
             note.members = data.members;
             note.name = data.name;
             note.description = data.description;
-            note.save()    
+            await note.save()    
                 .then(note => note.populate('members.user', 'username fullName picture')
                     .populate('admin', 'username fullName picture')
                     .execPopulate());
