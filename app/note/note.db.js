@@ -96,27 +96,45 @@ module.exports = {
             }
             if (note.status == 'COMPLETED') {
                 throw new NoteCompletedError()
-            }        
+            }
             console.log("1 data.members ",data.members)
             await asyncForEach(data.members, async (mem, index, array) => {                
                 if (mem.isNewMember) {
+                    note.members.push({
+                        user: mem.user,
+                        isLeft: false,
+                        totalPayment: 0,
+                        totalRemain: 0,
+                        deleted: false
+                    })
                     await new UserNoteDetailModel({ note: _id, user: mem.user}).save()
                 }
-                if (mem.isLeft && mem.userRemainAmount == 0 && mem.userPaymentAmount == 0)
-                    mem.deleted = true;
+                if (mem.isLeft) {
+                    const noteDetails = await UserNoteDetailModel.findOne({note: _id, user: mem.user})
+                    console.log("noteDetails ",noteDetails)
+                    if (noteDetails == null)
+                        throw new NoteNotFoundError();
+                    if (noteDetails.userRemainAmount > 0 || noteDetails.userPaymentAmount > 0 || noteDetails.userPaidAmount > 0) {
+                        throw new PermissionDeniedError("Cannot kick this user because they joined transaction!");
+                    }
+
+                    noteDetails.isLeft=true;
+                    await noteDetails.save();
+                    note.members = note.members.filter(m => !m.user.equals(mem.user))
+
+                }
                 return mem
             });
-            console.log("2 data.members ",data.members)
+            console.log("2 note.members ",note.members)
             note.admin = data.admin;
             note.status = data.status;
-            note.members = data.members;
+            // note.members = data.members;
             note.name = data.name;
             note.description = data.description;
             await note.save()    
                 .then(note => note.populate('members.user', 'username fullName picture')
                     .populate('admin', 'username fullName picture')
                     .execPopulate());
-
             res.status(201).send({ note });
         } catch (err) {
             res.status(404).send(err);
