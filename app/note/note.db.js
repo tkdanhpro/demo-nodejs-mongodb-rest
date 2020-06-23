@@ -64,6 +64,7 @@ module.exports = {
     getUserNotes: async (req, res) => {
         try {
             const _id = req.user._id;
+            console.log("user id ",_id)
             var notes = await NoteModel.find({ 'members.user': { '$eq': _id, '$exists': true } }
                 , { name: 1, description: 1, status: 1, totalCashIn: 1, totalCashOut: 1, totalRemain: 1, created_at: 1, updated_at: 1, 'members.user': 1, createdBy: 1, admin: 1 })
                 .populate('members.user', 'fullName picture')
@@ -72,14 +73,17 @@ module.exports = {
                 .then(results => results.filter(item => item.members.filter(m => m.user).length > 0))
             
             // var notes = results.filter(item => item.members.filter(m => m.user).length > 0)
+            let results = [];
             await asyncForEach(notes, async (note, index, array) => {
                 const userNote = await UserNoteDetailModel.findOne({note: note._id, user: _id, isLeft: false});
-                
-                array[index].userRemainAmount = userNote.userRemainAmount
+                if (userNote) {
+                    array[index].userRemainAmount = userNote.userRemainAmount
+                    results.push(note)
+                }
             })
             
 
-            res.status(201).send({ notes });
+            res.status(201).send({ notes: results });
         } catch (err) {
             res.status(404).send(err);
         }
