@@ -97,7 +97,7 @@ module.exports = {
             if (note.status == 'COMPLETED') {
                 throw new NoteCompletedError()
             }
-            console.log("1 data.members ",data.members)
+            console.log("1 data ",data)
             await asyncForEach(data.members, async (mem, index, array) => {                
                 if (mem.isNewMember) {
                     note.members.push({
@@ -125,7 +125,6 @@ module.exports = {
                 }
                 return mem
             });
-            console.log("2 note.members ",note.members)
             if (data.admin) {
                 note.admin = data.admin;
             }
