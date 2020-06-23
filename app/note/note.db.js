@@ -45,7 +45,7 @@ module.exports = {
                 .populate('createdBy', 'username fullName picture ')
                 .populate('admin', 'username fullName picture ');
             
-            const members = await UserNoteDetailModel.find({note: note._id})
+            const members = await UserNoteDetailModel.find({note: note._id, isLeft: false})
                 .populate('user', 'fullName picture');
 
             // await asyncForEach(notes, async (note, index, array) => {
@@ -73,7 +73,7 @@ module.exports = {
             
             // var notes = results.filter(item => item.members.filter(m => m.user).length > 0)
             await asyncForEach(notes, async (note, index, array) => {
-                const userNote = await UserNoteDetailModel.findOne({note: note._id, user: _id});
+                const userNote = await UserNoteDetailModel.findOne({note: note._id, user: _id, isLeft: false});
                 
                 array[index].userRemainAmount = userNote.userRemainAmount
             })
@@ -111,7 +111,7 @@ module.exports = {
                 }
                 if (mem.isLeft) {
                     const noteDetails = await UserNoteDetailModel.findOne({note: _id, user: mem.user})
-                    console.log("noteDetails ",noteDetails)
+                    // console.log("noteDetails ",noteDetails)
                     if (noteDetails == null)
                         throw new NoteNotFoundError();
                     if (noteDetails.userRemainAmount > 0 || noteDetails.userPaymentAmount > 0 || noteDetails.userPaidAmount > 0) {
@@ -126,7 +126,9 @@ module.exports = {
                 return mem
             });
             console.log("2 note.members ",note.members)
-            note.admin = data.admin;
+            if (data.admin) {
+                note.admin = data.admin;
+            }
             note.status = data.status;
             // note.members = data.members;
             note.name = data.name;
@@ -222,6 +224,7 @@ module.exports = {
                 .populate('admin', 'username fullName picture')
                 .execPopulate());
 
+                console.log(note)
             res.status(201).send(note);
         } catch (err) {
             res.status(404).send(err);
