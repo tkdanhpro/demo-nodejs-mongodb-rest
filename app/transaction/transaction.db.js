@@ -344,7 +344,7 @@ module.exports = {
             if (!trans) {
                 throw new TransNotFoundError()
             }
-            const trackings = await UserTransTrackingModel.find({ trans: id, deleted: false })
+            const trackings = await UserTransTrackingModel.find({ trans: id})
                 .populate('user', 'fullName picture')
 
             res.status(201).send({ trans, trackings })
@@ -367,7 +367,7 @@ module.exports = {
             }
             
             
-            const userTrackings = await UserTransTrackingModel.find({ note : noteId, user: req.user._id, deleted: false })
+            const userTrackings = await UserTransTrackingModel.find({ note : noteId, user: req.user._id })
             
             // await asyncForEach(trans, async (tran, index, array) => {
             trans.forEach((tran, index, array) => {
