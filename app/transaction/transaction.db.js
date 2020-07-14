@@ -367,16 +367,13 @@ module.exports = {
             }
             
             
-            const userTrackings = await UserTransTrackingModel.find({ note : noteId, user: req.user._id, deleted: false  })
+            const userTrackings = await UserTransTrackingModel.find({ note : noteId, user: req.user._id  })
             
             // await asyncForEach(trans, async (tran, index, array) => {
             trans.forEach((tran, index, array) => {
-                // totalPayment += tran.value;
-                // console.log(userTrackings)
                 const item = userTrackings.filter(tracking => tracking.trans.equals(tran._id))
-                if (item.length > 0) {
+                if (item.length > 0 && !item[0].deleted) {
                     array[index].remainAmount += item[0].remain
-                    console.log(item[0])
                 }
                 
             })
