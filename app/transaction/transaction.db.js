@@ -372,7 +372,7 @@ module.exports = {
             // await asyncForEach(trans, async (tran, index, array) => {
             trans.forEach((tran, index, array) => {
                 const item = userTrackings.filter(tracking => tracking.trans.equals(tran._id))
-                if (item.length > 0 && !item[0].deleted) {
+                if (item.length > 0) {
                     array[index].remainAmount += item[0].remain
                 }
 
