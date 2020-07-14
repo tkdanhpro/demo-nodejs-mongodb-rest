@@ -367,7 +367,7 @@ module.exports = {
             }
             
             
-            const userTrackings = await UserTransTrackingModel.find({ note : noteId, user: req.user._id })
+            const userTrackings = await UserTransTrackingModel.find({ note : noteId, user: req.user._id, deleted: false  })
             
             // await asyncForEach(trans, async (tran, index, array) => {
             trans.forEach((tran, index, array) => {
