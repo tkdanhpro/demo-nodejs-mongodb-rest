@@ -258,6 +258,7 @@ module.exports = {
             res.status(404).send(err);
         }
     },
+    // demo
 
     kick: async (req, res) => {
         try {
