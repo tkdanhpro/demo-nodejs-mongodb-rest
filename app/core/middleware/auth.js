@@ -1,19 +1,29 @@
 const jwt = require('jsonwebtoken');
-const UserModel = require('../../user/user.model');
 const AuthenticationFailedError = require('../error/AuthenticationFailedError')
-
-const JWT_KEY = '@Money!Xi@oLin$@Tranvan2@@';
+const { usersCollectionRef } = require('../../../config/db')
 
 const auth = async (req, res, next) => {
     try {
+        const JWT_KEY = process.env.JWT_KEY;
+        
         const token = req.header('Money-Xiaolin-Auth');
-
+        console.log("token ", token)
         if (!token) {
             throw new AuthenticationFailedError();
         }
         const data = jwt.verify(token, JWT_KEY);
-        
-        const user = await UserModel.findOne({ _id: data.id, 'tokens.token': token });
+        // console.log("data ", data)
+        const user = await usersCollectionRef.doc(data.id).get();
+
+        // console.log("auth user ", user)
+        // if (snapshot.empty) {
+        //     throw new AuthenticationFailedError()
+        // }
+        // let user;
+        // snapshot.forEach(doc => {
+        //     user = doc.data()
+        // })
+
         if (!user) {
             throw new AuthenticationFailedError();
         }

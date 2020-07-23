@@ -14,25 +14,25 @@ userRoute.post('/forgotPassword', async (req, res) => {
   }
 });
 
-userRoute.post('/verifyForgotPasswordCode', async (req, res) => {
-  try {
-    await userDb.verifyForgotPasswordCode(req, res);
-  } catch (error) {
-    res.status(500).send(error.message)
-  }
-});
+// userRoute.post('/verifyForgotPasswordCode', async (req, res) => {
+//   try {
+//     await userDb.verifyForgotPasswordCode(req, res);
+//   } catch (error) {
+//     res.status(500).send(error.message)
+//   }
+// });
 
-userRoute.post('/resetPassword', async (req, res) => {
-  try {
-    await userDb.resetPassword(req, res);
-  } catch (error) {
-    res.status(500).send(error.message)
-  }
-});
+// userRoute.post('/resetPassword', async (req, res) => {
+//   try {
+//     await userDb.resetPassword(req, res);
+//   } catch (error) {
+//     res.status(500).send(error.message)
+//   }
+// });
 
 userRoute.get('/me', auth, async (req, res, next) => {
   try {
-    res.send(req.user)
+    await userDb.getUserInfo(req, res);
   } catch (err) {
     next();
     res.status(500).send(err.message)
@@ -114,16 +114,14 @@ userRoute.post('/gg/verify_token', (req, res) => {
           let fullName = body.name;
           let googleId = body.sub;
           let email = body.email || '';
-          let picture = body.picture;
+          let picture = body.picture || '';
 
           let userData = {
             "type": "GOOGLE",
             "fullName": fullName,
             "email": email,
             "googleId": googleId,
-            "picture": picture,
-            "totalSpentAmount": 0,
-            "totalLoanAmount": 0
+            "picture": picture
           }
 
           userDb.verifyGgAccount(userData, res);
@@ -172,7 +170,7 @@ userRoute.post('/fb/verify_token', (req, res) => {
           let email = body.email || '';
           let facebookLink = body.link || '';
 
-          let picture = body.picture.data.url;
+          let picture = body.picture.data.url || '';
 
           let userData = {
             "type": "FACEBOOK",
@@ -180,9 +178,7 @@ userRoute.post('/fb/verify_token', (req, res) => {
             "email": email,
             "picture": picture,
             "facebookId": facebookId,
-            "facebookLink": facebookLink,
-            "totalSpentAmount": 0,
-            "totalLoanAmount": 0
+            "facebookLink": facebookLink
           }
           
 
@@ -203,37 +199,36 @@ userRoute.post('/apple/verify', async (req, res) => {
   }
 });
 
-userRoute.get("/all", async (req, res) => {
-  // var data = {};
-  userDb.getUsers({}, res);
-});
+// userRoute.get("/all", async (req, res) => {
+//   userDb.getAll(req, res);
+// });
 
-userRoute.get("/:id", (req, res) => {
-  let params = {};
-  let uuid = req.params.id;
-  if (uuid !== undefined && uuid !== "") {
-    params = { _id: uuid };
-  }
-  userDb.getUsers(params, res);
+// userRoute.get("/:id", (req, res) => {
+//   let params = {};
+//   let uuid = req.params.id;
+//   if (uuid !== undefined && uuid !== "") {
+//     params = { _id: uuid };
+//   }
+//   userDb.getUsers(params, res);
 
-});
+// });
 
-userRoute.post('/add', async (req, res) => {
-  try {
-    res.setHeader('Content-Type', 'application/json');
-    let user = req.body.data;
+// userRoute.post('/add', async (req, res) => {
+//   try {
+//     res.setHeader('Content-Type', 'application/json');
+//     let user = req.body.data;
 
-    if (user === undefined || user === "") {
-      res.send({ status: "error", value: "user undefined" });
-      return
-    }
+//     if (user === undefined || user === "") {
+//       res.send({ status: "error", value: "user undefined" });
+//       return
+//     }
 
-    userDb.addUser(user, res)
+//     userDb.addUser(user, res)
 
-  } catch (error) {
-    return handlePageError(res, error)
-  }
-});
+//   } catch (error) {
+//     return handlePageError(res, error)
+//   }
+// });
 
 userRoute.put('/update', auth, async (req, res) => {
   try {
@@ -261,32 +256,32 @@ userRoute.get('/search/:keyword', auth, async (req, res) => {
 });
 
 // for friends function
-userRoute.get('/friends/list', auth, async (req, res) => {
-  try {
-    userDb.getFriends(req, res)
+// userRoute.get('/friends/list', auth, async (req, res) => {
+//   try {
+//     userDb.getFriends(req, res)
 
-  } catch (error) {
-    return handlePageError(res, error)
-  }
-});
+//   } catch (error) {
+//     return handlePageError(res, error)
+//   }
+// });
 
-userRoute.post('/friends/add', auth, async (req, res) => {
-  try {
-    userDb.addFriends(req, res)
+// userRoute.post('/friends/add', auth, async (req, res) => {
+//   try {
+//     userDb.addFriends(req, res)
 
-  } catch (error) {
-    return handlePageError(res, error)
-  }
-});
+//   } catch (error) {
+//     return handlePageError(res, error)
+//   }
+// });
 
-userRoute.put('/friends/update', auth, async (req, res) => {
-  try {
-    userDb.updateFriends(req, res)
+// userRoute.put('/friends/update', auth, async (req, res) => {
+//   try {
+//     userDb.updateFriends(req, res)
 
-  } catch (error) {
-    return handlePageError(res, error)
-  }
-});
+//   } catch (error) {
+//     return handlePageError(res, error)
+//   }
+// });
 
 const handlePageError = (res, e) => res.status(500).send(e.message)
 

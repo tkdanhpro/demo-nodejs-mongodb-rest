@@ -1,23 +1,25 @@
-var express       = require('express');
-var path          = require('path');
-var favicon       = require('serve-favicon');
-var logger        = require('morgan');
-var cookieParser  = require('cookie-parser');
-var bodyParser    = require('body-parser');
+// var express       = require('express');
+import express from "express"
+import path from 'path'
+import favicon from 'serve-favicon'
+import logger from 'morgan'
+import cookieParser from 'cookie-parser'
+import bodyParser from 'body-parser'
 
-var mongodb       = require('./db');
+import mongodb from './db.js'
 
-var routes = require('./routes/routes');
-var userRoutes = require('./app/user/user.route');
-var noteRoutes = require('./app/note/note.route');
-var transRoutes = require('./app/transaction/transaction.route');
-var supportRoutes = require('./app/support/support.route');
+import routes from './routes/routes.js'
+import { userRoute } from './app/user/user.route.mjs'
+import noteRoutes from './app/note/note.route.js'
+import transRoutes from './app/transaction/transaction.route.js'
+import supportRoutes from './app/support/support.route.js'
 
 var app = express();
 
-var app = require('express')();
-var listener = app.listen(process.env.PORT ||8888, function(){
-    console.log('Listening on port ' + listener.address().port); //Listening on port 8888
+// import app = require('express')();
+
+var listener = app.listen(process.env.PORT || 8888, function () {
+  console.log('Listening on port ' + listener.address().port); //Listening on port 8888
 });
 
 // view engine setup
@@ -32,13 +34,13 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', routes);
-app.use('/users', userRoutes);
+app.use('/users', userRoute);
 app.use('/notes', noteRoutes);
 app.use('/trans', transRoutes);
 app.use('/supports', supportRoutes)
 
 // catch 404 and forward to error handler
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
   var err = new Error('Not Found');
   err.status = 404;
   next(err);
@@ -49,7 +51,7 @@ app.use(function(req, res, next) {
 // development error handler
 // will print stacktrace
 if (app.get('env') === 'development') {
-  app.use(function(err, req, res, next) {
+  app.use(function (err, req, res, next) {
     res.status(err.status || 500);
     res.render('error', {
       message: err.message,
@@ -61,7 +63,7 @@ if (app.get('env') === 'development') {
 
 // production error handler
 // no stacktraces leaked to user
-app.use(function(err, req, res, next) {
+app.use(function (err, req, res, next) {
   res.status(err.status || 500);
   res.render('error', {
     message: err.message,

@@ -81,6 +81,8 @@ module.exports ={
     // User not found!
     USER_NOT_FOUND: 708,
 
-    INVALID_PARAMS_ERROR: 709
+    INVALID_PARAMS_ERROR: 709,
+
+    INCORRECT_OLD_PASSWORD_ERROR: 710
 
 }

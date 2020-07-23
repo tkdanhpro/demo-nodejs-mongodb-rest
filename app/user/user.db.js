@@ -1,5 +1,3 @@
-const UserModel = require('./user.model');
-const ForgotPasswordModel = require('./../forgot_password/forgot_password');
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken');
 const validator = require('validator');
@@ -13,14 +11,20 @@ const AuthenticationFailedError = require('./../core/error/AuthenticationFailedE
 const InvalidUsernameError = require('./../core/error/InvalidUsernameError');
 const UsernameLengthRequireError = require('./../core/error/UsernameLengthRequireError');
 const EmailNotFoundError = require('./../core/error/EmailNotFoundError');
-const InvalidVerifyCode = require('./../core/error/InvalidVerifyCode');
-const UserNotFoundError = require('./../core/error/UserNotFoundError');
-const JWT_KEY = process.env.JWT_KEY;
+const IncorrectOldPassword = require('./../core/error/IncorrectOldPassword');
+const InvalidPasswordError = require('./../core/error/InvalidPasswordError');
+const { v4: uuidv4 } = require('uuid');
+
 require('dotenv').config();
 
+const JWT_KEY = process.env.JWT_KEY;
 const usernameRegex = /^[a-zA-Z0-9]+$/
 const passwordRegex = /^[a-zA-Z0-9]*\S{6,}$/
 const fullNameRegex = /^^[a-zA-Z0-9_ ]*$/
+
+const { usersCollectionRef } = require('../../config/db')
+const { convertTimeStampToDate, getData } = require('../core/common/common');
+const generateKeywords = require('../core/common/keywordGenerator');
 
 async function generateAuthToken(user) {
     const payload = {
@@ -30,8 +34,10 @@ async function generateAuthToken(user) {
     };
 
     const token = jwt.sign(payload, JWT_KEY);
-    user.tokens = user.tokens.concat({ token });
-    await user.save()
+
+    console.log("token! => ", token)
+    console.log("user =>", user)
+
     return token;
 }
 
@@ -42,8 +48,10 @@ async function generateFacebookAuthToken(user) {
     };
 
     const token = jwt.sign(payload, JWT_KEY);
-    user.tokens = user.tokens.concat({ token });
-    await user.save()
+
+    console.log("token! => ", token)
+    console.log("user =>", user)
+
     return token;
 }
 
@@ -54,8 +62,10 @@ async function generateGoogleAuthToken(user) {
     };
 
     const token = jwt.sign(payload, JWT_KEY);
-    user.tokens = user.tokens.concat({ token });
-    await user.save()
+
+    console.log("token! => ", token)
+    console.log("user =>", user)
+
     return token;
 }
 
@@ -66,43 +76,95 @@ async function generateAppleAuthToken(user) {
     };
 
     const token = jwt.sign(payload, JWT_KEY);
-    user.tokens = user.tokens.concat({ token });
-    await user.save()
+
+    console.log("token! => ", token)
+    console.log("user =>", user)
+
     return token;
 }
 
+const setUserKeywords = user => {
+    // generate keywords
+    const first = user.username || '';
+    const email = user.email !== undefined ? user.email.substring(0, user.email.lastIndexOf("@")) : ''
+    const middle = email
+    const last = user.fullName || '';
+    const suffix = '';
+
+    user.keywords = generateKeywords([
+        first,
+        middle,
+        last,
+        suffix
+    ])
+}
+
 async function addUser(user) {
-    if (user.passwordHash !== undefined & user.passwordHash !== '') {
+    if (user.passwordHash !== undefined && user.passwordHash !== '') {
         user.passwordHash = await bcrypt.hash(user.passwordHash, 8);
     }
 
-    await user.save();
+    // generate user id
+    const userId = uuidv4();
+    user.id = userId
+    // generate keywords
+    setUserKeywords(user)
+
+    await usersCollectionRef.doc(userId).set(user)
+    // let doc = (await newUser.get()).data()
+    // doc.id = newUser.id
+
+    // set docId to userId
+    // await usersCollectionRef.doc(doc.id).update(doc)
+    let token;
+
+    console.log('new user data ', user)
     switch (user.type) {
         case "FACEBOOK":
-            await generateFacebookAuthToken(user);
+            token = await generateFacebookAuthToken(user);
             break;
         case "GOOGLE":
-            await generateGoogleAuthToken(user);
+            token = await generateGoogleAuthToken(user);
             break;
         case "APPLE":
-            await generateAppleAuthToken(user);
+            token = await generateAppleAuthToken(user);
+            break;
+        case "NORMAL":
+            token = await generateAuthToken(user);
             break;
         default:
-            await generateAuthToken(user);
             break;
     }
 
-    return user;
+    // remove keywords field
+    let { keywords, passwordHash, ...result } = user
+    return { user: result, token };
+}
+
+function setDefaultUserData(data) {
+    // data.totalSpentAmount = 0;
+    // data.totalLoanAmount = 0;
+    data.notes = []
+    data.contacts = []
+    data.created_at = new Date()
+    data.updated_at = new Date()
+    data.deleted = false
+    return data
 }
 
 const findByCredentials = async (username, passwordHash) => {
-    const user = await UserModel.findOne({ username });
+    const snapshot = await usersCollectionRef.where('username', '==', username).get();
+    if (snapshot.empty) {
+        throw new AuthenticationFailedError()
+    }
+    let user = getData(snapshot)
+
+    console.log("user ", user)
 
     if (!user) {
         throw new AuthenticationFailedError()
     }
     const isPasswordMatch = await bcrypt.compare(passwordHash, user.passwordHash);
-
     if (!isPasswordMatch) {
         throw new AuthenticationFailedError()
     }
@@ -110,11 +172,17 @@ const findByCredentials = async (username, passwordHash) => {
 };
 
 const findByCredentialsByEmail = async (email, passwordHash) => {
-    const user = await UserModel.findOne({ email });
-
-    if (!user) {
+    // const user = await UserModel.findOne({ email });
+    const snapshot = await usersCollectionRef.where('email', '==', email).get();
+    if (snapshot.empty) {
         throw new AuthenticationFailedError()
     }
+
+    let user = getData(snapshot)
+
+    console.log("user ", user)
+
+    // const user = snapshot[0]
     const isPasswordMatch = await bcrypt.compare(passwordHash, user.passwordHash);
 
     if (!isPasswordMatch) {
@@ -125,105 +193,120 @@ const findByCredentialsByEmail = async (email, passwordHash) => {
 
 
 const verifyEmail = async (email) => {
-    try {
-        if (email.length && !validator.isEmail(email)) {
-            throw new WrongEmailFormatError()
+    if (email.length && !validator.isEmail(email)) {
+        throw new WrongEmailFormatError()
+    }
+    if (email.length) {
+        const snapshot = await usersCollectionRef.where('email', '==', email).get();
+        if (!snapshot.empty) {
+            throw new EmailAlreadyExistsError()
         }
-        if (email.length) {
-            const existEmail = await UserModel.find({ email });
 
-            if (existEmail != undefined && Object.keys(existEmail).length) {
-                throw new EmailAlreadyExistsError()
-            }
-        }
-    } catch (err) {
-        throw err
     }
 
 };
 
+
+// const searchUser = async keyword => {
+//     const username = usersCollectionRef.where('username', '==', keyword).get();
+//     const email = usersCollectionRef.where('email', '==', keyword).get();
+//     const fullname = usersCollectionRef.where('fullname', '==', keyword).get();
+
+//     const [usernameQuerySnapshot, emailQuerySnapshot, fullnameQuerySnapshot] = await Promise.all([
+//         username,
+//         email,
+//         fullname
+//     ]);
+
+//     const usernameArray = usernameQuerySnapshot.docs;
+//     const emailArray = emailQuerySnapshot.docs;
+//     const fullnameArray = fullnameQuerySnapshot.docs;
+//     console.log("usernameArray ", usernameArray)
+//     console.log("emailArray ", emailArray)
+//     console.log("fullnameArray ", fullnameArray)
+//     const results = _.concat(usernameArray,emailArray, fullnameArray);
+//     console.log("results ", results)
+//     return _.uniqWith(results, _.isEqual);;
+// }
+
 module.exports = {
+    // firebase implemented
     verifyFbAccount: async (userData, res) => {
-        const user = await UserModel.findOne({ facebookId: userData.facebookId }, (err, result) => {
-            if (err || !result) {
-                console.log(err);
-                return err;
-            }
-            return result;
+        const snapshot = await usersCollectionRef.where('facebookId', '==', userData.facebookId).get();
 
-        });
-
-        if (user !== null && Object.keys(user)) {
-            const token = await generateAuthToken(user)
+        if (!snapshot.empty) {
+            let user = getData(snapshot)
+            const token = await generateFacebookAuthToken(user)
+            convertTimeStampToDate(user)
             res.send({ user, token })
         }
         else {
-            let newUser = new UserModel(userData);
-            await addUser(newUser);
-            res.send({ user: newUser, token: newUser.tokens[0].token })
+            setDefaultUserData(userData)
+            let { user, token } = await addUser(userData);
+            // convertTimeStampToDate(user)
+            res.send({ user, token })
 
         }
     },
 
+    // firebase implemented
     verifyGgAccount: async (userData, res) => {
-        const user = await UserModel.findOne({ googleId: userData.googleId }, (err, result) => {
-            if (err || !result) {
-                console.log(err);
-                return err;
-            }
-            return result;
+        const snapshot = await usersCollectionRef.where('googleId', '==', userData.googleId).get();
 
-        });
-
-        if (user !== null && Object.keys(user)) {
-            const token = await generateAuthToken(user)
+        if (!snapshot.empty) {
+            let user = getData(snapshot)
+            const token = await generateGoogleAuthToken(user)
+            convertTimeStampToDate(user)
             res.send({ user, token })
         }
         else {
-            let newUser = new UserModel(userData);
-            await addUser(newUser);
-            res.send({ user: newUser, token: newUser.tokens[0].token })
+            setDefaultUserData(userData)
+            let { user, token } = await addUser(userData);
+            // convertTimeStampToDate(user)
+            res.send({ user, token })
+
         }
     },
 
+    // firebase implemented
+    // need to be re-implemented by Apple ID verify
     verifyAppleAccount: async (req, res) => {
         let data = req.body.data;
-        const user = await UserModel.findOne({ appleId: data.userId }, (err, result) => {
-            if (err || !result) {
-                console.log(err);
-                return err;
-            }
-            return result;
+        const snapshot = await usersCollectionRef.where('appleId', '==', data.userId).get();
 
-        });
-
-        if (user !== null && Object.keys(user)) {
-            const token = await generateAuthToken(user)
+        if (!snapshot.empty) {
+            let user = getData(snapshot)
+            const token = await generateAppleAuthToken(user)
+            convertTimeStampToDate(user)
             res.send({ user, token })
         }
         else {
-            let newUser = new UserModel({
+            let newUser = {
                 type: 'APPLE',
                 appleId: data.userId,
                 fullName: data.fullName,
-                email: data.email
+                email: data.email,
+                picture: ''
 
-            });
-            await addUser(newUser);
-            res.send({ user: newUser, token: newUser.tokens[0].token })
+            };
+            setDefaultUserData(newUser)
+            let { user, token } = await addUser(newUser);
+            // convertTimeStampToDate(user)
+            res.send({ user, token })
         }
     },
 
-    getUsers: async (params, res) => {
-        try {
-            const users =  await UserModel.find(params);
-            res.status(201).send({ data: users });
-        } catch (err) {
-            res.status(404).send({ status: 500, message: 'Ops! Something went wrong. Please try again!' });
-        }
-        
-    },
+    // getAll: async (req, res) => {
+    //     try {
+    //         const users = await UserModel.find(params);
+    //         res.status(201).send({ data: users });
+    //     } catch (err) {
+    //         res.status(404).send({ status: 500, message: 'Ops! Something went wrong. Please try again!' });
+    //     }
 
+    // },
+
+    // may be not use
     signOut: async (req, res) => {
         try {
             req.user.tokens = req.user.tokens.filter((token) => {
@@ -236,103 +319,139 @@ module.exports = {
         }
     },
 
+    // firebase implemented
     forgotPassword: async (req, res) => {
         try {
             const email = req.body.data.email;
-            var user = await UserModel.findOne({email});
-            if (!user) {
+
+            const snapshot = await usersCollectionRef.where('email', '==', email).get();
+
+            if (snapshot.empty) {
                 throw new EmailNotFoundError();
             }
-            const newPassword = Math.floor(100000 + Math.random() * 90000000)+'';
+            const newPassword = Math.floor(100000 + Math.random() * 90000000) + '';
 
             const sgMail = require('@sendgrid/mail');
-            sgMail.setApiKey(process.env.SENDGRID_API_KEY);           
-            
+            sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
             const msg = {
                 from: 'moneyxiaolin@gmail.com',
                 to: email,
                 subject: '[MoneyXiaolin] Your New Password',
                 text: 'MoneyXiaolin New Password',
-                html: '<p>Your new password is : '+ newPassword + ' </p></br><p>We recommend you update your own password!</p>'
+                html: '<p>Your new password is : ' + newPassword
+                    + ' </p></br><p>We recommend you update your own password!</p>'
             };
             await sgMail.send(msg).then((sent) => {
-                console.log('sent ', sent)
+                console.log('== MoneyXiaolin New Password sent => ', sent)
             });
-            
-            user.passwordHash = await bcrypt.hash(newPassword, 8);
-            user.tokens = [];
-            await generateAuthToken(user);
-            var updatedUser = await UserModel.findByIdAndUpdate(user._id, { user });
-            res.status(201).send({ verified : true });
+
+
+            let user = getData(snapshot)
+
+            const passwordHash = await bcrypt.hash(newPassword, 8);
+
+            var updatedUser = await usersCollectionRef.doc(user.id).update({ passwordHash, updated_at: new Date() });
+            console.log("updatedUser ", updatedUser)
+            res.status(201).send({ verified: true });
 
         } catch (err) {
             res.status(404).send(err);
         }
     },
 
-    verifyForgotPasswordCode: async (req, res) => {
-        try {
-            const code = req.body.data.code;
-            const codeData = await ForgotPasswordModel.findOne({code, verified: false});
-            if (!codeData) {
-                throw new InvalidVerifyCode();
-            }
-            codeData.verified = true;
-            console.log(codeData)
-            codeData.save()
-            
-            res.send({ verified : true })
-        } catch (err) {
-            res.status(404).send(err);
-        }
-    },
+    // firebase implemented
+    // verifyForgotPasswordCode: async (req, res) => {
+    //     try {
+    //         const code = req.body.data.code;
+    //         const snapshot = await forgotPasswordsCollectionRef
+    //             .where('code', '==', code)
+    //             .where('verified', '==', false).get()
 
-    resetPassword: async (req, res) => {
-        const code = req.body.data.code;
-        const codeData = await ForgotPasswordModel.findOne({code, verified: true})
-        if (!codeData) {
-            throw new InvalidVerifyCode();
-        }
-        var user = await UserModel.findById(codeData.user)
-        if (!user) {
-            throw new UserNotFoundError();
-        }
-        const newPassword = req.body.data.newPassword;
-        const passwordHash = await bcrypt.hash(newPassword, 8);
+    //         if (snapshot.empty) {
+    //             throw new InvalidVerifyCode();
+    //         }
 
-        user.passwordHash = passwordHash;
-        user.tokens = [];
-        const token = await generateAuthToken(user);
+    //         let codeData;
+    //         snapshot.forEach(doc => {
+    //             codeData = doc.data()
+    //         })
 
-        const updatedUser = await UserModel.findByIdAndUpdate(user._id, { user }, { new: true });
+    //         const verifiedCode = await forgotPasswordsCollectionRef.doc(codeData.id).set({ verified: true })
+    //         console.log("verifiedCode ", verifiedCode)
 
-        res.status(201).send({ user: updatedUser, token: token });
-    },
+    //         res.send({ verified: true })
+    //     } catch (err) {
+    //         res.status(404).send(err);
+    //     }
+    // },
 
+    // firebase implemented
+    // resetPassword: async (req, res) => {
+    //     const code = req.body.data.code;
+    //     const snapshot = await forgotPasswordsCollectionRef
+    //         .where('code', '==', code)
+    //         .where('verified', '==', true).get()
+
+    //     if (snapshot.empty) {
+    //         throw new InvalidVerifyCode();
+    //     }
+    //     if (snapshot.empty) {
+    //         throw new InvalidVerifyCode();
+    //     }
+    //     let codeData;
+    //     snapshot.forEach(doc => {
+    //         codeData = doc.data()
+    //     })
+    //     var user = await UserModel.findById(codeData.user)
+    //     if (!user) {
+    //         throw new UserNotFoundError();
+    //     }
+    //     const newPassword = req.body.data.newPassword;
+    //     const passwordHash = await bcrypt.hash(newPassword, 8);
+
+    //     user.passwordHash = passwordHash;
+    //     user.tokens = [];
+    //     const token = await generateAuthToken(user);
+
+    //     const updatedUser = await UserModel.findByIdAndUpdate(user._id, { user }, { new: true });
+
+    //     res.status(201).send({ user: updatedUser, token: token });
+    // },
+
+    // firebase implemented
     signInWithPassword: async (req, res) => {
         try {
             const data = req.body.data;
             if (data.isEmail) {
                 const user = await findByCredentialsByEmail(data.email, data.passwordHash);
+
                 if (!user) {
                     throw new AuthenticationFailedError();
                 }
                 const token = await generateAuthToken(user)
-                res.send({ user, token })
+                convertTimeStampToDate(user)
+                let { keywords, passwordHash, ...result } = user
+                res.send({ user: result, token })
             } else {
+                console.log("data ", data)
                 const user = await findByCredentials(data.username, data.passwordHash);
+
                 if (!user) {
                     throw new AuthenticationFailedError();
                 }
                 const token = await generateAuthToken(user)
-                res.send({ user, token })
+                convertTimeStampToDate(user)
+                let { keywords, passwordHash, ...result } = user
+                res.send({ user: result, token })
             }
-            
+
         } catch (err) {
             res.status(404).send(err);
         }
     },
 
+    // firebase implement
     signUpWithPassword: async (req, res) => {
         try {
 
@@ -358,9 +477,9 @@ module.exports = {
                 throw new UsernameLengthRequireError();
             }
 
-            let existUser = Object.assign({}, await UserModel.find({ username: username }));
+            const existUser = await usersCollectionRef.where('username', '==', username).get();
 
-            if (existUser != undefined && Object.keys(existUser).length) {
+            if (!existUser.empty) {
                 throw new UsernameAlreadyExistsError();
             }
             if (data.passwordHash.length < 6) {
@@ -372,72 +491,107 @@ module.exports = {
 
             // register normal new user
             data.type = "NORMAL";
-            data.totalSpentAmount = 0;
-            data.totalLoanAmount = 0;
-            const newUser = new UserModel(data);
-            await addUser(newUser);
-
-            res.status(201).send({ user: newUser, token: newUser.tokens[0].token });
+            data.picture = ''
+            setDefaultUserData(data)
+            const { user, token } = await addUser(data);
+            // convertTimeStampToDate(user)
+            res.status(201).send({ user, token });
         } catch (err) {
             res.status(404).send(err);
         }
 
     },
 
+    // firebase implemented
     updateUserInfo: async (req, res) => {
         const id = req.user.id;
         const data = req.body.data;
-
+        console.log("data ", data)
         if (data.email && data.email != req.user.email) {
             await verifyEmail(data.email)
         }
+        data.updated_at = new Date()
+        setUserKeywords(data)
 
-        const result = await UserModel.findByIdAndUpdate(id, data, { new: true });
-        res.status(201).send({ data: result });
+        await usersCollectionRef.doc(id).update(data);
+        let result = (await usersCollectionRef.doc(id).get()).data()
+
+        convertTimeStampToDate(result)
+        let { keywords, passwordHash, ...user } = result
+
+        res.status(201).send({ user });
     },
 
+    // firebase implemented
     changePassword: async (req, res) => {
         const id = req.user.id;
-        const username = req.user.username;
+        console.log("user id ", id)
+        // const username = req.user.username;
         const oldPassword = req.body.data.oldPassword;
         const newPassword = req.body.data.newPassword;
 
         const passwordHash = await bcrypt.hash(newPassword, 8);
-
-        const user = await findByCredentials(username, oldPassword);
+        const user = (await usersCollectionRef.doc(id).get()).data();
+        console.log("user user ", user)
         if (!user) {
             throw new AuthenticationFailedError();
         }
+        const isMatch = await bcrypt.compare(oldPassword, user.passwordHash);
+        if (!isMatch) {
+            throw new IncorrectOldPassword();
+        }
 
         user.passwordHash = passwordHash;
-        user.tokens = [];
+        user.updated_at = new Date()
+
         const token = await generateAuthToken(user);
+        console.log("firebase user id ", user.id)
+        await usersCollectionRef.doc(id).update(user);
 
-        const updatedUser = await UserModel.findByIdAndUpdate(id, { user }, { new: true });
-
-        res.status(201).send({ user: updatedUser, token: token });
+        res.status(201).send({ status: 'success', token });
     },
 
+    // need to be refactor
     search: async (req, res) => {
         const keyword = req.params.keyword.toLowerCase();
-        const regKey = new RegExp(keyword, 'i');
-        
-        const searchResults = await UserModel.find({
-            $or: [
-                { 'username': regKey },
-                { 'email': regKey },
-                { 'fullName': regKey }
-            ],
-            _id: { $ne: req.user._id }
-        }, { username: 1, fullName: 1, email: 1, picture: 1 })
-            .sort({
-                'username': 1,
-                'email': 1,
-                'fullName': 1
+        // const regKey = new RegExp(keyword, 'i');
+        let searchResults = []
+        console.log('keyword ', keyword)
+        await usersCollectionRef
+            .where('keywords', 'array-contains', keyword)
+            // .orderBy('fulllName')
+            .get()
+            .then(result => {
+                result.forEach(docSnapshot => {
+                    let { keywords, passwordHash, ...item } = docSnapshot.data();
+                    convertTimeStampToDate(item)
+                    searchResults.push(item)
+                });
+
             })
-            .limit(10);
-            console.log(regKey)
+
+        console.log('searchResults => ', searchResults)
         res.status(201).send({ searchResults });
+    },
+
+    getUserInfo: async (req, res) => {
+        try {
+            const id = req.user.id;
+            console.log("user id ", id)
+            // const username = req.user.username;
+            const user = (await usersCollectionRef.doc(id).get()).data();
+            convertTimeStampToDate(user)
+            let { keywords, passwordHash, ...result } = user;
+            res.send({ user: result })
+        } catch (err) {
+            res.status(500).send({ status: 500, message: 'Ops! Something went wrong. Please try again!' });
+        }
+    },
+
+    // need to be refactor
+    keywordGenerator: async (req, res) => {
+
+        res.status(201).send({});
     }
 
 }
