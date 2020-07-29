@@ -12,13 +12,14 @@ const auth = async (req, res, next) => {
             throw new AuthenticationFailedError();
         }
         const data = jwt.verify(token, JWT_KEY);
-        
-        const user = await UserModel.findOne({ _id: data.id, 'tokens.token': token });
+        const id = data._id || data.id;
+        let user = await UserModel.findOne({ _id: id });
+
         if (!user) {
             throw new AuthenticationFailedError();
         }
-        req.user = user;
-        req.token = token;
+        const { keywords, passwordHash, ...result } = user._doc
+        req.user = result;
         next()
     } catch (err) {
         res.status(404).send(err);

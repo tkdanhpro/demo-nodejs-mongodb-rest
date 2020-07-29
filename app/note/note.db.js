@@ -18,18 +18,24 @@ module.exports = {
         try {
             const user = req.user;
             const data = req.body.data;
-            if (!data.members.length)
+            if (!data.members.length) {
                 throw new MembersNoteNotEmptyError();
-            data.createdBy = user._id;
-            data.admin = user._id;
-            data.members = data.members.concat({ user });
+            }
+            const userId = user._id || user.id;
+
+            data.createdBy = userId;
+            data.admin = userId;
+
+            data.members = data.members.concat({ user: userId });
             const note = new NoteModel(data);
             await note.save()
                 .then(n => n.populate('members.user', 'fullName picture')
                     .populate('admin', 'fullName picture')
+                    .populate('createdBy', 'fullName picture')
                     .execPopulate());
 
-            data.members.forEach(member => new UserNoteDetailModel({ note, user: member.user}).save())        
+            data.members.forEach(member => new UserNoteDetailModel({ note, user: member.user}).save())   
+
             res.status(201).send({ note });
 
         } catch (err) {
