@@ -35,14 +35,6 @@ const users = mongoose.model('users', new mongoose.Schema({
     },
 
     passwordHash: String,
-    tokens: [
-        {
-            token: {
-                type: String,
-                required: true
-            }
-        }
-    ],
     type: {
         type: String,
         enum: ['FACEBOOK', 'GOOGLE', 'NORMAL', 'APPLE']
@@ -90,7 +82,7 @@ const users = mongoose.model('users', new mongoose.Schema({
         }
     ],
     friends: [
-        { 
+        {
             user: {
                 type: Schema.Types.ObjectId, ref: 'users'
             },
@@ -98,8 +90,9 @@ const users = mongoose.model('users', new mongoose.Schema({
                 type: Boolean,
                 default: false
             }
-         }
-    ]
+        }
+    ],
+    keywords: [String]
 }, {
     timestamps: {
         createdAt: 'created_at',

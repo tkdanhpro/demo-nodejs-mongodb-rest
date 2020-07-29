@@ -14,36 +14,30 @@ userRoute.post('/forgotPassword', async (req, res) => {
   }
 });
 
-userRoute.post('/verifyForgotPasswordCode', async (req, res) => {
-  try {
-    await userDb.verifyForgotPasswordCode(req, res);
-  } catch (error) {
-    res.status(500).send(error.message)
-  }
-});
+// userRoute.post('/verifyForgotPasswordCode', async (req, res) => {
+//   try {
+//     await userDb.verifyForgotPasswordCode(req, res);
+//   } catch (error) {
+//     res.status(500).send(error.message)
+//   }
+// });
 
-userRoute.post('/resetPassword', async (req, res) => {
-  try {
-    await userDb.resetPassword(req, res);
-  } catch (error) {
-    res.status(500).send(error.message)
-  }
-});
+// userRoute.post('/resetPassword', async (req, res) => {
+//   try {
+//     await userDb.resetPassword(req, res);
+//   } catch (error) {
+//     res.status(500).send(error.message)
+//   }
+// });
 
 userRoute.get('/me', auth, async (req, res, next) => {
   try {
-    res.send(req.user)
+    let { keywords, passwordHash, ...user } = req.user._doc;
+
+    res.send(user)
   } catch (err) {
     next();
     res.status(500).send(err.message)
-  }
-});
-
-userRoute.post('/appInfo', (req, res) => {
-  try {
-
-  } catch (error) {
-    return (res, error) => res.status(500).send(error.message)
   }
 });
 
@@ -121,7 +115,7 @@ userRoute.post('/gg/verify_token', (req, res) => {
             "fullName": fullName,
             "email": email,
             "googleId": googleId,
-            "picture": picture,
+            "picture": picture || '',
             "totalSpentAmount": 0,
             "totalLoanAmount": 0
           }
@@ -172,7 +166,7 @@ userRoute.post('/fb/verify_token', (req, res) => {
           let email = body.email || '';
           let facebookLink = body.link || '';
 
-          let picture = body.picture.data.url;
+          let picture = body.picture.data.url || '';
 
           let userData = {
             "type": "FACEBOOK",
@@ -184,7 +178,7 @@ userRoute.post('/fb/verify_token', (req, res) => {
             "totalSpentAmount": 0,
             "totalLoanAmount": 0
           }
-          
+
 
           userDb.verifyFbAccount(userData, res);
         }
@@ -203,20 +197,6 @@ userRoute.post('/apple/verify', async (req, res) => {
   }
 });
 
-userRoute.get("/all", async (req, res) => {
-  // var data = {};
-  userDb.getUsers({}, res);
-});
-
-userRoute.get("/:id", (req, res) => {
-  let params = {};
-  let uuid = req.params.id;
-  if (uuid !== undefined && uuid !== "") {
-    params = { _id: uuid };
-  }
-  userDb.getUsers(params, res);
-
-});
 
 userRoute.post('/add', async (req, res) => {
   try {
@@ -260,33 +240,42 @@ userRoute.get('/search/:keyword', auth, async (req, res) => {
   }
 });
 
+userRoute.get('/generateKewords', auth, async (req, res) => {
+  try {
+    await userDb.generateKewords(req, res)
+
+  } catch (error) {
+    return handlePageError(res, error)
+  }
+});
+
 // for friends function
-userRoute.get('/friends/list', auth, async (req, res) => {
-  try {
-    userDb.getFriends(req, res)
+// userRoute.get('/friends/list', auth, async (req, res) => {
+//   try {
+//     userDb.getFriends(req, res)
 
-  } catch (error) {
-    return handlePageError(res, error)
-  }
-});
+//   } catch (error) {
+//     return handlePageError(res, error)
+//   }
+// });
 
-userRoute.post('/friends/add', auth, async (req, res) => {
-  try {
-    userDb.addFriends(req, res)
+// userRoute.post('/friends/add', auth, async (req, res) => {
+//   try {
+//     userDb.addFriends(req, res)
 
-  } catch (error) {
-    return handlePageError(res, error)
-  }
-});
+//   } catch (error) {
+//     return handlePageError(res, error)
+//   }
+// });
 
-userRoute.put('/friends/update', auth, async (req, res) => {
-  try {
-    userDb.updateFriends(req, res)
+// userRoute.put('/friends/update', auth, async (req, res) => {
+//   try {
+//     userDb.updateFriends(req, res)
 
-  } catch (error) {
-    return handlePageError(res, error)
-  }
-});
+//   } catch (error) {
+//     return handlePageError(res, error)
+//   }
+// });
 
 const handlePageError = (res, e) => res.status(500).send(e.message)
 
