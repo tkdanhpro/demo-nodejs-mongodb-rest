@@ -1,0 +1,17 @@
+version: '3.3'
+networks:
+  default:
+    driver: bridge
+    ipam:
+      driver: default
+services:
+  money-xiaolin:
+    environment:
+      ENV: "staging"
+    network_mode: host
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: money-xiaolin
+    ports:
+      - "8888:8888"
