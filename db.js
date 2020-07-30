@@ -1,6 +1,7 @@
 require('dotenv').config();
 let mongoose = require('mongoose');
 
+console.log("process.env.MONGODB_URL ", process.env.MONGODB_URL)
 const mongoUrl = process.env.MONGODB_URL
 
 
