@@ -1,1 +1,1 @@
-docker-compose -f docker-compose-staging.yml up -d
+docker-compose -f docker-compose-staging.yml up -d 
