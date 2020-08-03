@@ -1,0 +1,20 @@
+version: '3.3'
+networks:
+  default:
+    driver: bridge
+    ipam:
+      driver: default
+services:
+  money-xiaolin:
+    environment:
+      ENV: "production"
+      MONGODB_URL: "mongodb://127.0.0.1:27017/money-pro"
+      JWT_KEY: "money-xiaolin-production.danhln.com"
+      SENDGRID_API_KEY: "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"
+    network_mode: host
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: money-xiaolin
+    ports:
+      - "8888:8888"
