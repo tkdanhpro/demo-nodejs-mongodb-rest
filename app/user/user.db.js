@@ -109,8 +109,6 @@ async function addUser(data) {
 
     let { keywords, passwordHash, ...result } = user._doc;
 
-    console.log("result => ", result)
-
     return { user: result, token };
 
 }
@@ -233,7 +231,9 @@ module.exports = {
 
         if (user !== null && Object.keys(user)) {
             const token = await generateAuthToken(user)
-            res.send({ user, token })
+            let { keywords, passwordHash, ...result } = user._doc;
+
+            res.send({ user: result, token })
         }
         else {
             let newUser = new UserModel({
@@ -288,7 +288,7 @@ module.exports = {
 
             user.passwordHash = await bcrypt.hash(newPassword, 8);
             await generateAuthToken(user);
-            await UserModel.findByIdAndUpdate(user._id, { user });
+            await UserModel.findByIdAndUpdate(user._id, { user }, { new: true });
             res.status(201).send({ verified: true });
 
         } catch (err) {
@@ -378,7 +378,7 @@ module.exports = {
             await verifyEmail(data.email)
         }
         console.log("data update => ", data)
-        const result = await UserModel.findByIdAndUpdate(id, data);
+        const result = await UserModel.findByIdAndUpdate(id, data, {new: true});
         let { keywords, passwordHash, ...user } = result._doc
 
         console.log("user updated => ", user);
@@ -426,7 +426,7 @@ module.exports = {
             setUserKeywords(user);
             user.save()
         });
-        
+
         res.status(201).send({ users });
     }
 
