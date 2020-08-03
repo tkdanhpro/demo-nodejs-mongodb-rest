@@ -109,6 +109,8 @@ async function addUser(data) {
 
     let { keywords, passwordHash, ...result } = user._doc;
 
+    console.log("result => ", result)
+
     return { user: result, token };
 
 }
@@ -375,9 +377,11 @@ module.exports = {
         if (data.email && data.email != req.user.email) {
             await verifyEmail(data.email)
         }
-
+        console.log("data update => ", data)
         const result = await UserModel.findByIdAndUpdate(id, data);
         let { keywords, passwordHash, ...user } = result._doc
+
+        console.log("user updated => ", user);
         res.status(201).send({ user });
     },
 
