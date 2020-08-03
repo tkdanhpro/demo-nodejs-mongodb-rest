@@ -1,7 +1,4 @@
-const db = require('../../db');
 const SupportModel = require('./suport.model');
-
-var con = db.connectDB();
 
 module.exports = {
 
