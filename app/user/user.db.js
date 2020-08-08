@@ -17,9 +17,9 @@ const InvalidPasswordError = require('./../core/error/InvalidPasswordError');
 require('dotenv').config();
 const JWT_KEY = process.env.JWT_KEY;
 
-const usernameRegex = /^[a-zA-Z0-9]+$/
+const usernameRegex = /^[a-zA-Z0-9\.\-]+$/
 const passwordRegex = /^[a-zA-Z0-9]*\S{6,}$/
-const fullNameRegex = /^^[a-zA-Z0-9_ ]*$/
+const fullNameRegex = /^[^-\s]((?![\`\~\!\@\#\$\%\^\&\*\(\)\-\=\_\+\[\]\\\{\}\|\;\'\:\"\,\.\/\<\>\?]).){2,}$/
 
 const generateKeywords = require('../core/common/keywordGenerator');
 
@@ -162,17 +162,14 @@ const verifyEmail = async (email) => {
 
 const setUserKeywords = user => {
     // generate keywords
-    const first = user.username || '';
-    const email = user.email !== undefined ? user.email.substring(0, user.email.lastIndexOf("@")) : ''
-    const middle = email
-    const last = user.fullName || '';
-    const suffix = '';
+    const username = user.username !== undefined ? user.username.toLowerCase() : '';
+    const email = user.email !== undefined ? user.email.substring(0, user.email.lastIndexOf("@")).trim().toLowerCase() : ''
+    const fullName = user.fullName !== undefined ? user.fullName.toLowerCase() : '';
 
     user.keywords = generateKeywords([
-        first,
-        middle,
-        last,
-        suffix
+        username,
+        email,
+        fullName
     ])
 }
 
@@ -230,9 +227,8 @@ module.exports = {
         });
 
         if (user !== null && Object.keys(user)) {
-            const token = await generateAuthToken(user)
+            const token = await generateAuthToken(user);
             let { keywords, passwordHash, ...result } = user._doc;
-
             res.send({ user: result, token })
         }
         else {
@@ -327,7 +323,7 @@ module.exports = {
             if (!fullNameRegex.test(data.fullName)) {
                 throw new InvalidFullNameError()
             }
-
+        
             // If sign up with email
             const emailInput = data.email;
 
@@ -374,14 +370,15 @@ module.exports = {
         const id = req.user.id || req.user._id;
         const data = req.body.data;
 
+        console.log("data update; ", data);
+
         if (data.email && data.email != req.user.email) {
             await verifyEmail(data.email)
         }
-        console.log("data update => ", data)
+
         const result = await UserModel.findByIdAndUpdate(id, data, {new: true});
         let { keywords, passwordHash, ...user } = result._doc
-
-        console.log("user updated => ", user);
+        console.log("user updated; ", user);
         res.status(201).send({ user });
     },
 
@@ -426,7 +423,7 @@ module.exports = {
             setUserKeywords(user);
             user.save()
         });
-
+        
         res.status(201).send({ users });
     }
 

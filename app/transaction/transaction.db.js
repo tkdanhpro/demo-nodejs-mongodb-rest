@@ -104,8 +104,10 @@ module.exports = {
             const data = req.body.data;
             data.createdBy = req.user._id;
             data.payer = req.user._id;
-            const transId = data._id
+            const transId = data._id;
 
+            const removedUsers = data.payments.filter(t => t.amount <= 0).map(t => t.user + "");
+            
             const oldTrans = await TransModel.findById(transId);
             if (!oldTrans) {
                 throw new TransNotFoundError()
@@ -136,26 +138,6 @@ module.exports = {
             UserTransTrackingModel.deleteMany({ note: note._id, trans: transId })
                 .then(result => console.log(`Deleted ${result.deletedCount} item(s).`))
                 .catch(err => console.error(`Delete failed with error: ${err}`))
-
-            // var paymentUsers = data.payments.map(p => p.user);
-            // console.log("paymentUsers ", paymentUsers);
-
-            // var removedUsersTracking = previousTrackings.filter(tracking =>  !paymentUsers.includes(tracking.user));
-            // console.log("removedUsersTracking ", removedUsersTracking);
-            // if (removedUsersTracking.length > 0) {
-            //     await asyncForEach(removedUsersTracking, async (tracking, index, array) => {
-            //         console.log("tracking ", tracking);
-            //         var userNoteDetail = await UserNoteDetailModel.findOne({note: note._id, user: tracking.user});                   
-            //         console.log("userNoteDetail ", userNoteDetail);
-            //         userNoteDetail.userRemainAmount -= tracking.remain;
-            //         userNoteDetail.userPaymentAmount -= tracking.payment;
-            //         userNoteDetail.userPaidAmount = userNoteDetail.userRemainAmount + userNoteDetail.userPaymentAmount;
-
-            //         userNoteDetail = await userNoteDetail.save(); 
-
-            //     })
-            // }
-
 
             // add new user trans tracking
             var userPayment = 0;
@@ -188,11 +170,7 @@ module.exports = {
                 var oldValues = previousTrackings.filter(tracking => tracking.user.equals(payment.user));
                 if (oldValues.length < 1)
                     oldValues.push({ payment: 0, remain: 0, user: payment.user })
-                // if (trackingData.user.equals(oldValues[0].user)) {
 
-                // } else {
-
-                // }
                 userNoteDetail.userRemainAmount += trackingData.remain - oldValues[0].remain;
                 userNoteDetail.userPaymentAmount += trackingData.payment - oldValues[0].payment;
                 userNoteDetail.userPaidAmount = userNoteDetail.userRemainAmount + userNoteDetail.userPaymentAmount;
@@ -210,6 +188,12 @@ module.exports = {
             const userRemainAmount = payerNoteDetail.userRemainAmount;
             const userPaymentAmount = payerNoteDetail.userPaymentAmount;
             const userPaidAmount = payerNoteDetail.userPaidAmount;
+
+            // update tran's user
+            console.log(" trans update users => ", trans.users)
+            console.log("removedUsers ", removedUsers)
+            trans.users = trans.users.filter(t => removedUsers.indexOf(t._id + "") < 0);
+            console.log(" trans update users => ", trans.users)
             res.status(201).send({ trans, userRemainAmount, userPaymentAmount, userPaidAmount, totalCashOut });
 
         } catch (err) {
@@ -232,11 +216,6 @@ module.exports = {
             trans.deleted = true;
             trans.save();
             const note = trans.note;
-            // delete previous tracking list
-            //const previousTrackings = await UserTransTrackingModel.find({note: note._id, trans: transId})
-            // UserTransTrackingModel.deleteMany({note: note._id, trans: transId})
-            // .then(result => console.log(`Deleted ${result.deletedCount} item(s).`))
-            // .catch(err => console.error(`Delete failed with error: ${err}`))
 
             await UserTransTrackingModel.updateMany({ note: note._id, trans: transId }, { "$set": { deleted: true } })
 
@@ -367,21 +346,27 @@ module.exports = {
             }
 
 
-            const userTrackings = await UserTransTrackingModel.find({ note: noteId, user: req.user._id })
+            const currentUserTrackings = await UserTransTrackingModel.find({ note: noteId, user: req.user._id })
+            const allTransTrackings = await UserTransTrackingModel.find({ note: noteId })
 
             // await asyncForEach(trans, async (tran, index, array) => {
             trans.forEach((tran, index, array) => {
-                const item = userTrackings.filter(tracking => tracking.trans.equals(tran._id))
+                const item = currentUserTrackings.filter(tracking => tracking.trans.equals(tran._id))
                 if (item.length > 0) {
                     array[index].remainAmount += item[0].remain
                 }
 
+
+                // filter remain = 0
+                const removedUsers = allTransTrackings.filter(t => tran._id.equals(t.trans) && t.remain == 0 && t.payment == 0).map(t => t.user + "");
+                array[index].users = tran.users.filter(t => removedUsers.indexOf(t._id + "") < 0);
+                console.log("removedUsers ", removedUsers)
             })
 
             const note = await NoteModel.findById(noteId)
             var userRemainAmount = 0;
             var userPaymentAmount = 0;
-            userTrackings.forEach(tracking => {
+            currentUserTrackings.forEach(tracking => {
                 if (!tracking.deleted) {
                     userRemainAmount += tracking.remain;
                     userPaymentAmount += tracking.payment
