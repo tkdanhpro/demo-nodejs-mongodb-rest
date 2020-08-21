@@ -217,7 +217,7 @@ module.exports = {
 
     verifyAppleAccount: async (req, res) => {
         let data = req.body.data;
-        const user = await UserModel.findOne({ appleId: data.userId }, (err, result) => {
+        let user = await UserModel.findOne({ appleId: data.userId }, (err, result) => {
             if (err || !result) {
                 console.log(err);
                 return err;
@@ -228,6 +228,10 @@ module.exports = {
 
         if (user !== null && Object.keys(user)) {
             const token = await generateAuthToken(user);
+            user.fullName = data.fullName;
+            user.email = data.email;
+            await user.save();
+        
             let { keywords, passwordHash, ...result } = user._doc;
             res.send({ user: result, token })
         }
@@ -323,7 +327,7 @@ module.exports = {
             if (!fullNameRegex.test(data.fullName)) {
                 throw new InvalidFullNameError()
             }
-        
+
             // If sign up with email
             const emailInput = data.email;
 
@@ -376,7 +380,7 @@ module.exports = {
             await verifyEmail(data.email)
         }
 
-        const result = await UserModel.findByIdAndUpdate(id, data, {new: true});
+        const result = await UserModel.findByIdAndUpdate(id, data, { new: true });
         let { keywords, passwordHash, ...user } = result._doc
         console.log("user updated; ", user);
         res.status(201).send({ user });
@@ -423,7 +427,7 @@ module.exports = {
             setUserKeywords(user);
             user.save()
         });
-        
+
         res.status(201).send({ users });
     }
 
