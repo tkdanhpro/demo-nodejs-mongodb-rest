@@ -228,10 +228,14 @@ module.exports = {
 
         if (user !== null && Object.keys(user)) {
             const token = await generateAuthToken(user);
-            user.fullName = data.fullName;
-            user.email = data.email;
+            if (data.fullName) {
+                user.fullName = data.fullName;
+            }
+            if (data.email) {
+                user.email = data.email;
+            }
             await user.save();
-        
+
             let { keywords, passwordHash, ...result } = user._doc;
             res.send({ user: result, token })
         }
