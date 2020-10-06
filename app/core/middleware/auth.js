@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const UserModel = require('../../user/user.model');
 const AuthenticationFailedError = require('../error/AuthenticationFailedError')
 
-const JWT_KEY = '@Money!Xi@oLin$@Tranvan2@@';
+const JWT_KEY = process.env.JWT_KEY;
 
 const auth = async (req, res, next) => {
     try {
