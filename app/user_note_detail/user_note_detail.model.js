@@ -29,6 +29,11 @@ const userNoteDetails = mongoose.model('user_note_details', new mongoose.Schema(
     deleted: {
         type: Boolean,
         default: false
+    },
+    status: {
+        type: String,
+        enum:['PENDING', 'CANCELED', 'ACCEPTED', 'REJECTED'],
+        default: 'PENDING'
     }
 }, {
     timestamps: {

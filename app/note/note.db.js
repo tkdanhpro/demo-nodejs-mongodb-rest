@@ -18,8 +18,8 @@ module.exports = {
         try {
             const user = req.user;
             const data = req.body.data;
-            if (!data.members.length) {
-                throw new MembersNoteNotEmptyError();
+            if (!data.members || !data.members.length) {
+                data.members = [];
             }
             const userId = user._id || user.id;
 
