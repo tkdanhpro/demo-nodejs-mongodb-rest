@@ -162,17 +162,12 @@ const verifyEmail = async (email) => {
 
 const setUserKeywords = user => {
     // generate keywords
-    const first = user.username || '';
-    const email = user.email !== undefined ? user.email.substring(0, user.email.lastIndexOf("@")) : ''
-    const middle = email
-    const last = user.fullName || '';
-    const suffix = '';
+    const username = user.username || '';
+    const id = user.id || user._id;
 
     user.keywords = generateKeywords([
-        first,
-        middle,
-        last,
-        suffix
+        username,
+        id
     ])
 }
 
@@ -401,15 +396,14 @@ module.exports = {
 
         res.status(201).send({ status: 'success', token });
     },
-
+    // search by userId / username
     search: async (req, res) => {
         const keyword = req.params.keyword.toLowerCase();
         const searchResults = await UserModel.find({ keywords: { "$in": [keyword] } },
             { username: 1, fullName: 1, email: 1, picture: 1 })
             .sort({
                 'username': 1,
-                'email': 1,
-                'fullName': 1
+                'id': 1
             })
             .limit(10);
 

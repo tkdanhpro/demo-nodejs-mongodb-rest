@@ -1,9 +1,7 @@
 const NoteModel = require('./note.model');
-const TransModel = require('./../transaction/transaction.model')
 const UserNoteDetailModel = require('./../user_note_detail/user_note_detail.model')
-const UserTrackingModel = require('./../user_trans_tracking/user_trans_tracking.model')
+const UserInvitationModel = require('./../user_invitation/user_invitation.model')
 const PermissionDeniedError = require('../core/error/PermissionDeniedError')
-const MembersNoteNotEmptyError = require('../core/error/MembersNoteNotEmptyError')
 const NoteNotFoundError = require('../core/error/NoteNotFoundError')
 const NoteCompletedError = require('../core/error/NoteCompletedError')
 
@@ -34,7 +32,12 @@ module.exports = {
                     .populate('createdBy', 'fullName picture')
                     .execPopulate());
 
-            data.members.forEach(member => new UserNoteDetailModel({ note, user: member.user}).save())   
+            data.members.forEach(member => {
+                new UserNoteDetailModel({ note, user: member.user}).save();
+                if (!userId.equals(member.user)) {
+                    new UserInvitationModel({ note, receiver: member.user, sender: userId}).save();
+                }
+            });
 
             res.status(201).send({ note });
 
@@ -70,6 +73,10 @@ module.exports = {
     getUserNotes: async (req, res) => {
         try {
             const _id = req.user._id;
+            // filter by status: OPENING, CLOSED, ALL
+            const status = req.status;
+
+            //
             console.log("user id ",_id)
             var notes = await NoteModel.find({ 'members.user': { '$eq': _id, '$exists': true } }
                 , { name: 1, description: 1, status: 1, totalCashIn: 1, totalCashOut: 1, totalRemain: 1, created_at: 1, updated_at: 1, 'members.user': 1, createdBy: 1, admin: 1 })
