@@ -9,7 +9,7 @@ module.exports = {
         try {
             const _id = req.user._id;
             const notifications = await UserNotificationModel.find({ 'user': _id, deleted: false}
-                , { title: 1, attachment: 1, status: 1})
+                , { title: 1, attachment: 1, status: 1, type: 1})
 
             res.status(201).send({ notifications });
         } catch (err) {

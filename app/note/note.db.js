@@ -33,10 +33,13 @@ module.exports = {
                     .execPopulate());
 
             data.members.forEach(member => {
-                new UserNoteDetailModel({ note, user: member.user}).save();
-                if (!userId.equals(member.user)) {
-                    new UserInvitationModel({ note, receiver: member.user, sender: userId}).save();
+                const isAdmin = userId.equals(member.user);
+                let status = isAdmin ? 'ACCEPTED' : 'PENDING';
+                new UserNoteDetailModel({ note, user: member.user, status }).save();
+                if (!isAdmin) {
+                    new UserInvitationModel({ note, receiver: member.user, sender: userId }).save();
                 }
+
             });
 
             res.status(201).send({ note });
@@ -53,8 +56,8 @@ module.exports = {
                 // .populate('members.user', 'fullName picture')
                 .populate('createdBy', 'username fullName picture ')
                 .populate('admin', 'username fullName picture ');
-            
-            const members = await UserNoteDetailModel.find({note: note._id, isLeft: false})
+
+            const members = await UserNoteDetailModel.find({ note: note._id, isLeft: false })
                 .populate('user', 'fullName picture');
 
             // await asyncForEach(notes, async (note, index, array) => {
@@ -73,28 +76,33 @@ module.exports = {
     getUserNotes: async (req, res) => {
         try {
             const _id = req.user._id;
-            // filter by status: OPENING, CLOSED, ALL
-            const status = req.status;
+            // filter by status: OPENING, CLOSED
+            let statuses;
+            if (req.body.status) {
+                statuses = [req.body.status];
+            } else {
+                statuses = ['OPENING', 'CLOSED'];
+            }
 
             //
-            console.log("user id ",_id)
-            var notes = await NoteModel.find({ 'members.user': { '$eq': _id, '$exists': true } }
+            console.log("user id ", _id)
+            var notes = await NoteModel.find({ 'members.user': { '$eq': _id, '$exists': true }, status: { $in: statuses } }
                 , { name: 1, description: 1, status: 1, totalCashIn: 1, totalCashOut: 1, totalRemain: 1, created_at: 1, updated_at: 1, 'members.user': 1, createdBy: 1, admin: 1 })
                 .populate('members.user', 'fullName picture')
                 .populate('createdBy', 'username fullName picture ')
                 .populate('admin', 'username fullName picture ')
                 .then(results => results.filter(item => item.members.filter(m => m.user).length > 0))
-            
+
             // var notes = results.filter(item => item.members.filter(m => m.user).length > 0)
             let results = [];
             await asyncForEach(notes, async (note, index, array) => {
-                const userNote = await UserNoteDetailModel.findOne({note: note._id, user: _id, isLeft: false});
+                const userNote = await UserNoteDetailModel.findOne({ note: note._id, user: _id, isLeft: false });
                 if (userNote) {
                     array[index].userRemainAmount = userNote.userRemainAmount
                     results.push(note)
                 }
             })
-            
+
 
             res.status(201).send({ notes: results });
         } catch (err) {
@@ -114,8 +122,8 @@ module.exports = {
             if (note.status == 'COMPLETED') {
                 throw new NoteCompletedError()
             }
-            console.log("1 data ",data)
-            await asyncForEach(data.members, async (mem, index, array) => {                
+            console.log("1 data ", data)
+            await asyncForEach(data.members, async (mem, index, array) => {
                 if (mem.isNewMember) {
                     note.members.push({
                         user: mem.user,
@@ -124,10 +132,10 @@ module.exports = {
                         totalRemain: 0,
                         deleted: false
                     })
-                    await new UserNoteDetailModel({ note: _id, user: mem.user}).save()
+                    await new UserNoteDetailModel({ note: _id, user: mem.user }).save()
                 }
                 if (mem.isLeft) {
-                    const noteDetails = await UserNoteDetailModel.findOne({note: _id, user: mem.user})
+                    const noteDetails = await UserNoteDetailModel.findOne({ note: _id, user: mem.user })
                     // console.log("noteDetails ",noteDetails)
                     if (noteDetails == null)
                         throw new NoteNotFoundError();
@@ -135,7 +143,7 @@ module.exports = {
                         throw new PermissionDeniedError("Cannot kick this user because they joined transaction!");
                     }
 
-                    noteDetails.isLeft=true;
+                    noteDetails.isLeft = true;
                     await noteDetails.save();
                     note.members = note.members.filter(m => !m.user.equals(mem.user))
 
@@ -149,7 +157,7 @@ module.exports = {
             // note.members = data.members;
             note.name = data.name;
             note.description = data.description;
-            await note.save()    
+            await note.save()
                 .then(note => note.populate('members.user', 'username fullName picture')
                     .populate('admin', 'username fullName picture')
                     .execPopulate());
@@ -173,12 +181,12 @@ module.exports = {
 
             note.status = req.body.status;
             await note.save();
-                // .then(n => n.populate('members.user', 'fullName picture')
-                //     .populate('admin', 'fullName picture')
-                //     .execPopulate());
+            // .then(n => n.populate('members.user', 'fullName picture')
+            //     .populate('admin', 'fullName picture')
+            //     .execPopulate());
 
             // res.status(201).send({ note: note._id, status: note.status });
-            res.status(201).send({ status: note.status});
+            res.status(201).send({ status: note.status });
         } catch (err) {
             res.status(404).send(err);
         }
@@ -187,7 +195,7 @@ module.exports = {
     shareMoney: async (req, res) => {
         try {
             const noteId = req.params.id;
-            
+
             const note = await NoteModel.findById(noteId, { name: 1, description: 1, status: 1, totalCashIn: 1, totalCashOut: 1, totalRemain: 1, created_at: 1, updated_at: 1, createdBy: 1, admin: 1 });
             if (!note) {
                 throw new NoteNotFoundError();
@@ -196,7 +204,7 @@ module.exports = {
             await note.save();
             // console.log(note._id )
             const members = await UserNoteDetailModel.find({ note: note._id })
-            .populate('user', 'fullName picture');
+                .populate('user', 'fullName picture');
             res.status(201).send({ note, members });
         } catch (err) {
             res.status(404).send(err);
@@ -207,7 +215,7 @@ module.exports = {
     deleteNote: async (req, res) => {
         try {
             const _id = req.body.id;
-            var note = await NoteModel.findById( _id );
+            var note = await NoteModel.findById(_id);
             if (!note) {
                 throw new NoteNotFoundError()
             }
@@ -235,12 +243,12 @@ module.exports = {
 
             note.admin = admin;
             await note.save()
-            .then(note => note
-                .populate('members.user', 'username fullName picture')
-                .populate('admin', 'username fullName picture')
-                .execPopulate());
+                .then(note => note
+                    .populate('members.user', 'username fullName picture')
+                    .populate('admin', 'username fullName picture')
+                    .execPopulate());
 
-                console.log(note)
+            console.log(note)
             res.status(201).send(note);
         } catch (err) {
             res.status(404).send(err);
@@ -256,17 +264,17 @@ module.exports = {
                 throw new NoteNotFoundError();
             }
 
-            const noteDetails = await UserNoteDetailModel.findOne({note: noteId, user: userId})
+            const noteDetails = await UserNoteDetailModel.findOne({ note: noteId, user: userId })
             if (noteDetails == null)
                 throw new NoteNotFoundError();
             if (noteDetails.userRemainAmount > 0 || noteDetails.userPaymentAmount > 0 || noteDetails.userPaidAmount > 0) {
                 throw new PermissionDeniedError("You cannot leave because you created transaction!");
             }
 
-            noteDetails.isLeft=true;
+            noteDetails.isLeft = true;
             await noteDetails.save();
 
-            res.status(201).send({ note: noteId, user: userId, isLeft: true});
+            res.status(201).send({ note: noteId, user: userId, isLeft: true });
         } catch (err) {
             res.status(404).send(err);
         }
@@ -286,17 +294,17 @@ module.exports = {
             if (!admin.equals(note.admin)) {
                 throw new PermissionDeniedError();
             }
-            const noteDetails = await UserNoteDetailModel.findOne({note: noteId, user: userId})
+            const noteDetails = await UserNoteDetailModel.findOne({ note: noteId, user: userId })
             if (noteDetails == null)
                 throw new NoteNotFoundError();
             if (noteDetails.userRemainAmount > 0 || noteDetails.userPaymentAmount > 0 || noteDetails.userPaidAmount > 0) {
                 throw new PermissionDeniedError("This user cannot leave because they created transaction!");
             }
 
-            noteDetails.isLeft=true;
+            noteDetails.isLeft = true;
             await noteDetails.save();
 
-            res.status(201).send({ note: noteId, user: userId, isLeft: true});
+            res.status(201).send({ note: noteId, user: userId, isLeft: true });
         } catch (err) {
             res.status(404).send(err);
         }
