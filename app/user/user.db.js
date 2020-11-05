@@ -16,12 +16,25 @@ const InvalidPasswordError = require('./../core/error/InvalidPasswordError');
 
 require('dotenv').config();
 const JWT_KEY = process.env.JWT_KEY;
-
+const REFRESH_KEY = process.env.REFRESH_KEY;
+const EXPIRED_IN = process.env.EXPIRED_IN;
 const usernameRegex = /^[a-zA-Z0-9]+$/
 const passwordRegex = /^[a-zA-Z0-9]*\S{6,}$/
 const fullNameRegex = /^^[a-zA-Z0-9_ ]*$/
 
 const generateKeywords = require('../core/common/keywordGenerator');
+
+async function generateRefreshToken(user) {
+    const id = user._id || user.id;
+    const payload = {
+        id: id
+    };
+
+    const token = jwt.sign(payload, REFRESH_KEY, { expiresIn: "36500 days" });
+    console.log("refresh token! => ", token)
+
+    return token;
+}
 
 async function generateAuthToken(user) {
     const id = user._id || user.id;
@@ -31,7 +44,7 @@ async function generateAuthToken(user) {
         passwordHash: user.passwordHash
     };
 
-    const token = jwt.sign(payload, JWT_KEY);
+    const token = jwt.sign(payload, JWT_KEY, { expiresIn: EXPIRED_IN });
     console.log("token! => ", token)
     console.log("user =>", user)
     return token;
@@ -44,7 +57,7 @@ async function generateFacebookAuthToken(user) {
         facebookId: user.facebookId
     };
 
-    const token = jwt.sign(payload, JWT_KEY);
+    const token = jwt.sign(payload, JWT_KEY, { expiresIn: EXPIRED_IN });
     console.log("token! => ", token)
     console.log("user =>", user)
     return token;
@@ -57,7 +70,7 @@ async function generateGoogleAuthToken(user) {
         googleId: user.googleId
     };
 
-    const token = jwt.sign(payload, JWT_KEY);
+    const token = jwt.sign(payload, JWT_KEY, { expiresIn: EXPIRED_IN });
     console.log("token! => ", token)
     console.log("user =>", user)
     return token;
@@ -70,7 +83,7 @@ async function generateAppleAuthToken(user) {
         appleId: user.appleId
     };
 
-    const token = jwt.sign(payload, JWT_KEY);
+    const token = jwt.sign(payload, JWT_KEY, { expiresIn: EXPIRED_IN });
     return token;
 }
 
@@ -105,11 +118,13 @@ async function addUser(data) {
             break;
     }
 
+    let refreshToken = await generateRefreshToken(user);
+
     // remove keywords field
 
     let { keywords, passwordHash, ...result } = user._doc;
 
-    return { user: result, token };
+    return { user: result, token, refreshToken };
 
 }
 
@@ -225,8 +240,9 @@ module.exports = {
         });
 
         if (user !== null && Object.keys(user)) {
-            const token = await generateAuthToken(user)
-            res.send({ user, token })
+            const token = await generateAuthToken(user);
+            const refreshToken = await generateRefreshToken(user);
+            res.send({ user, token, refreshToken })
         }
         else {
             let newUser = new UserModel({
@@ -238,8 +254,8 @@ module.exports = {
 
             });
 
-            let { user, token } = await addUser(newUser);
-            res.send({ user, token })
+            let { user, token, refreshToken } = await addUser(newUser);
+            res.send({ user, token, refreshToken })
         }
     },
 
@@ -416,7 +432,7 @@ module.exports = {
             setUserKeywords(user);
             user.save()
         });
-        
+
         res.status(201).send({ users });
     }
 
