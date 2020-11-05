@@ -81,7 +81,7 @@ module.exports = {
             if (req.body.status) {
                 statuses = [req.body.status];
             } else {
-                statuses = ['OPENING', 'CLOSED'];
+                statuses = ['OPENING', 'CLOSED', 'COMPLETED'];
             }
 
             //
