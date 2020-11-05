@@ -16,12 +16,25 @@ const InvalidPasswordError = require('./../core/error/InvalidPasswordError');
 
 require('dotenv').config();
 const JWT_KEY = process.env.JWT_KEY;
-
-const usernameRegex = /^[a-zA-Z0-9\.\-]+$/
+const REFRESH_KEY = process.env.REFRESH_KEY;
+const EXPIRED_IN = process.env.EXPIRED_IN;
+const usernameRegex = /^[a-zA-Z0-9]+$/
 const passwordRegex = /^[a-zA-Z0-9]*\S{6,}$/
-const fullNameRegex = /^[^-\s]((?![\`\~\!\@\#\$\%\^\&\*\(\)\-\=\_\+\[\]\\\{\}\|\;\'\:\"\,\.\/\<\>\?]).){2,}$/
+const fullNameRegex = /^^[a-zA-Z0-9_ ]*$/
 
 const generateKeywords = require('../core/common/keywordGenerator');
+
+async function generateRefreshToken(user) {
+    const id = user._id || user.id;
+    const payload = {
+        id: id
+    };
+
+    const token = jwt.sign(payload, REFRESH_KEY, { expiresIn: "36500 days" });
+    console.log("refresh token! => ", token)
+
+    return token;
+}
 
 async function generateAuthToken(user) {
     const id = user._id || user.id;
@@ -31,7 +44,7 @@ async function generateAuthToken(user) {
         passwordHash: user.passwordHash
     };
 
-    const token = jwt.sign(payload, JWT_KEY);
+    const token = jwt.sign(payload, JWT_KEY, { expiresIn: EXPIRED_IN });
     console.log("token! => ", token)
     console.log("user =>", user)
     return token;
@@ -44,7 +57,7 @@ async function generateFacebookAuthToken(user) {
         facebookId: user.facebookId
     };
 
-    const token = jwt.sign(payload, JWT_KEY);
+    const token = jwt.sign(payload, JWT_KEY, { expiresIn: EXPIRED_IN });
     console.log("token! => ", token)
     console.log("user =>", user)
     return token;
@@ -57,7 +70,7 @@ async function generateGoogleAuthToken(user) {
         googleId: user.googleId
     };
 
-    const token = jwt.sign(payload, JWT_KEY);
+    const token = jwt.sign(payload, JWT_KEY, { expiresIn: EXPIRED_IN });
     console.log("token! => ", token)
     console.log("user =>", user)
     return token;
@@ -70,7 +83,7 @@ async function generateAppleAuthToken(user) {
         appleId: user.appleId
     };
 
-    const token = jwt.sign(payload, JWT_KEY);
+    const token = jwt.sign(payload, JWT_KEY, { expiresIn: EXPIRED_IN });
     return token;
 }
 
@@ -105,11 +118,13 @@ async function addUser(data) {
             break;
     }
 
+    let refreshToken = await generateRefreshToken(user);
+
     // remove keywords field
 
     let { keywords, passwordHash, ...result } = user._doc;
 
-    return { user: result, token };
+    return { user: result, token, refreshToken };
 
 }
 
@@ -162,14 +177,12 @@ const verifyEmail = async (email) => {
 
 const setUserKeywords = user => {
     // generate keywords
-    const username = user.username !== undefined ? user.username.toLowerCase() : '';
-    const email = user.email !== undefined ? user.email.substring(0, user.email.lastIndexOf("@")).trim().toLowerCase() : ''
-    const fullName = user.fullName !== undefined ? user.fullName.toLowerCase() : '';
+    const username = user.username || '';
+    const id = user.id || user._id;
 
     user.keywords = generateKeywords([
         username,
-        email,
-        fullName
+        id
     ])
 }
 
@@ -217,7 +230,7 @@ module.exports = {
 
     verifyAppleAccount: async (req, res) => {
         let data = req.body.data;
-        let user = await UserModel.findOne({ appleId: data.userId }, (err, result) => {
+        const user = await UserModel.findOne({ appleId: data.userId }, (err, result) => {
             if (err || !result) {
                 console.log(err);
                 return err;
@@ -228,16 +241,8 @@ module.exports = {
 
         if (user !== null && Object.keys(user)) {
             const token = await generateAuthToken(user);
-            if (data.fullName) {
-                user.fullName = data.fullName;
-            }
-            if (data.email) {
-                user.email = data.email;
-            }
-            await user.save();
-
-            let { keywords, passwordHash, ...result } = user._doc;
-            res.send({ user: result, token })
+            const refreshToken = await generateRefreshToken(user);
+            res.send({ user, token, refreshToken })
         }
         else {
             let newUser = new UserModel({
@@ -249,8 +254,8 @@ module.exports = {
 
             });
 
-            let { user, token } = await addUser(newUser);
-            res.send({ user, token })
+            let { user, token, refreshToken } = await addUser(newUser);
+            res.send({ user, token, refreshToken })
         }
     },
 
@@ -292,7 +297,7 @@ module.exports = {
 
             user.passwordHash = await bcrypt.hash(newPassword, 8);
             await generateAuthToken(user);
-            await UserModel.findByIdAndUpdate(user._id, { user }, { new: true });
+            await UserModel.findByIdAndUpdate(user._id, { user });
             res.status(201).send({ verified: true });
 
         } catch (err) {
@@ -378,15 +383,12 @@ module.exports = {
         const id = req.user.id || req.user._id;
         const data = req.body.data;
 
-        console.log("data update; ", data);
-
         if (data.email && data.email != req.user.email) {
             await verifyEmail(data.email)
         }
 
-        const result = await UserModel.findByIdAndUpdate(id, data, { new: true });
+        const result = await UserModel.findByIdAndUpdate(id, data);
         let { keywords, passwordHash, ...user } = result._doc
-        console.log("user updated; ", user);
         res.status(201).send({ user });
     },
 
@@ -410,15 +412,14 @@ module.exports = {
 
         res.status(201).send({ status: 'success', token });
     },
-
+    // search by userId / username
     search: async (req, res) => {
         const keyword = req.params.keyword.toLowerCase();
         const searchResults = await UserModel.find({ keywords: { "$in": [keyword] } },
             { username: 1, fullName: 1, email: 1, picture: 1 })
             .sort({
                 'username': 1,
-                'email': 1,
-                'fullName': 1
+                'id': 1
             })
             .limit(10);
 

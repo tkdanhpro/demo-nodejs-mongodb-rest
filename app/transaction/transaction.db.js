@@ -106,7 +106,7 @@ module.exports = {
             data.payer = req.user._id;
             const transId = data._id;
 
-            const removedUsers = data.payments.filter(t => t.amount <= 0).map(t => t.user + "");
+            //const removedUsers = data.payments.filter(t => t.amount <= 0).map(t => t.user + "");
             
             const oldTrans = await TransModel.findById(transId);
             if (!oldTrans) {
@@ -170,7 +170,6 @@ module.exports = {
                 var oldValues = previousTrackings.filter(tracking => tracking.user.equals(payment.user));
                 if (oldValues.length < 1)
                     oldValues.push({ payment: 0, remain: 0, user: payment.user })
-
                 userNoteDetail.userRemainAmount += trackingData.remain - oldValues[0].remain;
                 userNoteDetail.userPaymentAmount += trackingData.payment - oldValues[0].payment;
                 userNoteDetail.userPaidAmount = userNoteDetail.userRemainAmount + userNoteDetail.userPaymentAmount;
@@ -190,10 +189,10 @@ module.exports = {
             const userPaidAmount = payerNoteDetail.userPaidAmount;
 
             // update tran's user
-            console.log(" trans update users => ", trans.users)
-            console.log("removedUsers ", removedUsers)
-            trans.users = trans.users.filter(t => removedUsers.indexOf(t._id + "") < 0);
-            console.log(" trans update users => ", trans.users)
+            // console.log(" trans update users => ", trans.users)
+            // console.log("removedUsers ", removedUsers)
+            // trans.users = trans.users.filter(t => removedUsers.indexOf(t._id + "") < 0);
+            // console.log(" trans update users => ", trans.users)
             res.status(201).send({ trans, userRemainAmount, userPaymentAmount, userPaidAmount, totalCashOut });
 
         } catch (err) {
@@ -347,7 +346,9 @@ module.exports = {
 
 
             const currentUserTrackings = await UserTransTrackingModel.find({ note: noteId, user: req.user._id })
-            const allTransTrackings = await UserTransTrackingModel.find({ note: noteId })
+            // start new on staging
+            //const allTransTrackings = await UserTransTrackingModel.find({ note: noteId })
+            // end new on staging
 
             // await asyncForEach(trans, async (tran, index, array) => {
             trans.forEach((tran, index, array) => {
@@ -356,11 +357,12 @@ module.exports = {
                     array[index].remainAmount += item[0].remain
                 }
 
-
                 // filter remain = 0
-                const removedUsers = allTransTrackings.filter(t => tran._id.equals(t.trans) && t.remain == 0 && t.payment == 0).map(t => t.user + "");
-                array[index].users = tran.users.filter(t => removedUsers.indexOf(t._id + "") < 0);
-                console.log("removedUsers ", removedUsers)
+                // start new on staging
+                //const removedUsers = allTransTrackings.filter(t => tran._id.equals(t.trans) && t.remain == 0 && t.payment == 0).map(t => t.user + "");
+               // array[index].users = tran.users.filter(t => removedUsers.indexOf(t._id + "") < 0);
+                //console.log("removedUsers ", removedUsers)
+                // end new on staging
             })
 
             const note = await NoteModel.findById(noteId)

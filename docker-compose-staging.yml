@@ -8,6 +8,11 @@ services:
   money-xiaolin:
     environment:
       ENV: "staging"
+      MONGODB_URL: "mongodb://127.0.0.1:27017/moneydb"
+      JWT_KEY: "W4R0XZTRBL"
+      REFRESH_KEY: "S9LnEeyiVBJDhHE2mlQkK"
+      SENDGRID_API_KEY: "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"
+      EXPIRED_IN: "30 days"
     network_mode: host
     build:
       context: .

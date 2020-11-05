@@ -8,6 +8,8 @@ services:
   money-xiaolin:
     environment:
       ENV: "local"
+      EXPIRED_IN: 30000
+      REFRESH_KEY: S9LnEeyiVBJDhHE2mlQk
     network_mode: host
     build:
       context: .

@@ -11,6 +11,8 @@ var userRoutes = require('./app/user/user.route');
 var noteRoutes = require('./app/note/note.route');
 var transRoutes = require('./app/transaction/transaction.route');
 var supportRoutes = require('./app/support/support.route');
+var invitationRoutes = require('./app/user_invitation/user_invitation.route');
+var notificationRoutes = require('./app/user_notification/user_notification.route');
 
 var app = express();
 
@@ -36,6 +38,8 @@ app.use('/users', userRoutes);
 app.use('/notes', noteRoutes);
 app.use('/trans', transRoutes);
 app.use('/supports', supportRoutes)
+app.use('/invitations', invitationRoutes)
+app.use('/notifications', notificationRoutes)
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
